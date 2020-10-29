@@ -1,0 +1,360 @@
+---
+title: "WAcovariatesimulation"
+author: "Sean Bellew"
+date: "25/05/2020"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+We first extract the 19 bioclimatic bariables from worldclim data using the getData function (raster), picking the location of Margaret River WA as our study area.
+```{r,warning=FALSE}
+library(raster)
+library(mapview)
+library(usdm)
+library(spatstat)
+library(maptools)
+library(Metrics)
+set.seed(2)
+```
+We can choose to eliminate some of these covariates that are highly collerated using vifstep
+```{r}
+bioclim<-raster::getData('worldclim',var='bio',res=0.5,lon=115,lat=-34)
+vifstep(bioclim,th=5)
+```
+We use these 5 covariates for our model, and select the number of background points we wish to use
+```{r}
+backgrdpts<-10000
+e <- extent(116,119,-34,-31)
+bioclim <- crop(bioclim,e)
+bioclim<-bioclim[[c(3,8,9,13,14)]]
+bio3<-subset(bioclim,1,drop=TRUE)
+bio8<-subset(bioclim,2,drop=TRUE)
+bio9<-subset(bioclim,3,drop=TRUE)
+bio13<-subset(bioclim,4,drop=TRUE)
+bio14<-subset(bioclim,5,drop=TRUE)
+```
+We set up our grid next, and also normalise our covariates
+```{r}
+s <- raster(ncol=ncol(bioclim), nrow=nrow(bioclim), xmn=xmin(bioclim), xmx=xmax(bioclim), ymn=ymin(bioclim), ymx=ymax(bioclim))
+s.loc <- xyFromCell(s, 1:ncell(s))
+windowarea <- (xmax(bioclim)-xmin(bioclim))*(ymax(bioclim)-ymin(bioclim))
+```
+```{r}
+r<-raster(s)
+values(r) <- values(bio3)
+names(r) <- 'bio3'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio8)
+names(r) <- 'bio8'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio9)
+names(r) <- 'bio9'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio13)
+names(r) <- 'bio13'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio14)
+names(r) <- 'bio14'
+s <- addLayer(s, r)
+s<-scale(s,center=TRUE,scale=TRUE)
+```
+```{r}
+#set up background grid
+gridfactor <- 15
+row <- ceiling(gridfactor*c((gridfactor+1)/(2*gridfactor)+0:(nrow(s)/gridfactor-1)))
+col <- ceiling(gridfactor*c((gridfactor+1)/(2*gridfactor)+0:(ncol(s)/gridfactor-1)))
+cellnum <- cellFromRowColCombine(s,row,col)
+#cellnum <- 1:ncell(s)
+sgrid.loc <- xyFromCell(s,cellnum)
+sgrid.bio3 <- values(s)[,'bio3'][cellnum]
+sgrid.bio8 <- values(s)[,'bio8'][cellnum]
+sgrid.bio9 <- values(s)[,'bio9'][cellnum]
+sgrid.bio13 <- values(s)[,'bio13'][cellnum]
+sgrid.bio14 <- values(s)[,'bio14'][cellnum]
+X.back1 <- cbind(array(1,length(sgrid.bio3)),sgrid.bio3,sgrid.bio8,sgrid.bio9,sgrid.bio13,sgrid.bio14)
+```
+```{r, include=FALSE}
+
+
+#gridfactor=120
+ #  sgrid <- aggregate(s, fact=gridfactor, fun=modal)
+  #sgrid.loc <- xyFromCell(sgrid, 1:ncell(sgrid))
+  #sgrid.bio3 <- values(sgrid)[,'bio3']
+  #sgrid.bio8 <- values(sgrid)[,'bio8']
+  #sgrid.bio9 <- values(sgrid)[,'bio9']
+  #sgrid.bio13 <- values(sgrid)[,'bio13']
+  #sgrid.bio14 <- values(sgrid)[,'bio14']
+  #X.back1 <- cbind(array(1,length(sgrid.bio3)),sgrid.bio3,sgrid.bio8,sgrid.bio9,sgrid.bio13,sgrid.bio14)
+  #sgrid.loc <- xyFromCell(sgrid, 1:ncell(sgrid))
+```
+We want to select our parameter values so the mean number of points over the window is greater than 1000. This was done rather ad hoc using the mean value of the intensity function, factoring in the NA values also.
+```{r}
+
+  X <- cbind(array(1,dim(s)[1]*dim(s)[2]),values(s)[,'bio3'],values(s)[,'bio8'],values(s)[,'bio9'],values(s)[,'bio13'],values(s)[,'bio14'])
+  gridsizeratio=sum(!is.na(X))/length(X)
+  parameter <- c(5,0.2,0.3,-0.2,0.26,-0.2)
+  B <- parameter
+  values(s) <- exp(X%*%B)
+  maxlambda <- max(values(s),na.rm=TRUE)
+  
+``` 
+We then run N simulations for 32400 background/quadrature points, and average over the fits. Spatstat has been used as a comparison, with the covariates normalised and formatted to use in ppm.
+```{r,warning=FALSE,include=FALSE} 
+#set initial values
+N=1000
+totlrbadd=matrix(0,N,dim(X)[2])
+totwlrfit=matrix(0,N,dim(X)[2])
+totfitIPP=matrix(0,N,dim(X)[2])
+totfitIPPBT=matrix(0,N,dim(X)[2])
+totppmIPP=matrix(0,N,dim(X)[2])
+maxllfitIPP=matrix(0,N)
+maxllfitIPPBT=matrix(0,N)
+maxllwlrfit=matrix(0,N)
+maxlllrbadd=matrix(0,N)
+maxllppmIPP=matrix(0,N)
+tmlrbadd=0
+tmwlrfit=0
+tmfitIPP=0
+tmppmIPP=0
+tmfitIPPBT=0
+
+#create covariate list for use in spatstat from the covariate raster
+
+bio3<-scale(bio3,center=TRUE,scale=TRUE)
+bio8<-scale(bio8,center=TRUE,scale=TRUE)
+bio9<-scale(bio9,center=TRUE,scale=TRUE)
+bio13<-scale(bio13,center=TRUE,scale=TRUE)
+bio14<-scale(bio14,center=TRUE,scale=TRUE)
+cov3<-as.im.RasterLayer(bio3)
+cov8<-as.im.RasterLayer(bio8)
+cov9<-as.im.RasterLayer(bio9)
+cov13<-as.im.RasterLayer(bio13)
+cov14<-as.im.RasterLayer(bio14)
+covlist<-list(a=cov3,b=cov8,c=cov9,d=cov13,e=cov14)
+ w <- as.owin(cov3)
+ 
+ #negative Poisson likelihood function (gridded only)
+ 
+ likelihoodIPP = function(param){
+    lambda = exp(X.back1 %*% param)
+    mu = lambda * windowarea/nrow(X.back1)
+    logL.pp = sum(X.po %*% param,na.rm=TRUE) - sum(mu,na.rm=TRUE)
+    
+    (-1)*sum(logL.pp)
+ }
+ 
+ #negative Poisson likelihood function (X.back specifies Berman Turner, with area.back giving the weights)
+
+likelihoodIPPBT = function(param){
+  lambda = exp(X.back %*% param)
+  mu = lambda * area.back
+  logL.pp = sum(X.po %*% param,na.rm=TRUE) - sum(mu,na.rm=TRUE)
+  
+  (-1)*sum(logL.pp)
+}
+ 
+ #negative weighted logistic regression likelihood function
+ weight=1000
+likelihoodwlr <- function(param) {
+    alpha<-windowarea/(weight*dim(X.back1)[1])
+    loglikewlr <- -(sum(X.po%*% param,na.rm=TRUE)-sum(log(1+alpha*exp(X.po%*% param)),na.rm=TRUE)-sum(weight*log(1+alpha*exp(X.back1%*% param)),na.rm=TRUE))
+}
+
+for (i in 1:N){
+  
+  #sample presence points
+  
+  N.hpp <- rpois(1,maxlambda*windowarea)
+  ind.hpp <- sample(1:ncell(s), size=N.hpp, replace=FALSE)
+  loc.hpp <- s.loc[ind.hpp, ]
+  lambda.hpp <- values(s)[ind.hpp]
+ 
+  ind.ipp <- runif(N.hpp, 0,1) <= lambda.hpp/maxlambda
+  N.ipp <- sum(ind.ipp,na.rm=TRUE)
+  loc.ipp <- loc.hpp[ind.ipp, ]
+  X.po <- X[ind.hpp[ind.ipp], ]
+  X.poslope<-X.po[,2:length(parameter)]
+  
+#setting up Berman-Turner quadrature
+  
+  X.back<- rbind(X.po,X.back1)
+  s.loc.ipp=as.ppp(loc.ipp,W=w)
+sgrid.loc.ipp<-as.ppp(sgrid.loc,W=w)
+datadummy<-quadscheme(s.loc.ipp,sgrid.loc.ipp,method="grid")
+area.back <-w.quad(datadummy)
+  
+#fit Poisson likelihood
+  
+tm <- Sys.time()
+fitIPP <- optim(par=array(0,length(parameter)),fn=likelihoodIPP,method="BFGS")
+tmfitIPP=tmfitIPP+Sys.time()-tm
+totfitIPP[i,]=fitIPP$par
+maxllfitIPP[i,]<- -likelihoodIPP(totfitIPP[i,])-sum(log(1:N.ipp))
+
+#fit Poisson likelihood BT
+tm <- Sys.time()
+fitIPPBT <- optim(par=array(0,length(parameter)),fn=likelihoodIPPBT,method="BFGS")
+tmfitIPPBT=tmfitIPPBT+Sys.time()-tm
+totfitIPPBT[i,]=fitIPPBT$par
+maxllfitIPPBT[i,]<- -likelihoodIPPBT(totfitIPPBT[i,])-sum(log(1:N.ipp))
+
+#put covariates into dataframe for use in glm
+
+  tm <- Sys.time()
+  X.polr <-cbind(X.poslope,array(1,dim(X.poslope)[1]))
+  X.dpp <-cbind(X.back1[,2:dim(X.back1)[2]],array(0,dim(X.back1)[1]))
+  mydata <- rbind(X.polr,X.dpp)
+  offst <- array(log(dim(X.back1)[1]/windowarea),dim(mydata)[1])
+  mydata <- as.data.frame(mydata)
+  mydata$offst <- offst
+  
+#fit Baddeley Regression
+  
+  lrbadd <- glm(V6~sgrid.bio3+sgrid.bio8+sgrid.bio9+sgrid.bio13+sgrid.bio14+offset(-offst),data=mydata,family="binomial")
+   tmlrbadd=tmlrbadd+Sys.time()-tm
+  totlrbadd[i,]=coefficients(lrbadd)
+  maxlllrbadd[i,]=logLik(lrbadd)
+
+  #fit Weighted logistic regression
+  
+  tm <- Sys.time()
+  wlrfit <- optim(par=array(0,length(parameter)),fn=likelihoodwlr,method="BFGS")
+   tmwlrfit=tmwlrfit+Sys.time()-tm
+  totwlrfit[i,]=wlrfit$par
+  maxllwlrfit[i]<- -likelihoodwlr(totwlrfit[i,])-sum(log(1:N.ipp))
+  
+# fit using ppm
+  
+tm <- Sys.time() 
+mydata2<-as.data.frame(rbind(X.po,X.back1))
+mydata2<-mydata2[,2:dim(mydata2)[2]]
+ppmIPP<-ppm(datadummy,trend=~sgrid.bio3+sgrid.bio8+sgrid.bio9+sgrid.bio13+sgrid.bio14,data=mydata2,method='mpl'
+)
+tmppmIPP=tmppmIPP+Sys.time()-tm
+totppmIPP[i,]=coefficients(ppmIPP)
+maxllppmIPP[i,]=logLik(ppmIPP)-sum(log(1:N.ipp))
+
+}
+plot(loc.ipp)
+fitIPP1=colSums(totfitIPP)/N
+wlrfit1=colSums(totwlrfit)/N
+lrbadd1=colSums(totlrbadd)/N
+ppmIPP1=colSums(totppmIPP)/N
+
+```
+```{r}
+'IPP'
+print(fitIPP1)
+'weighted logistic regression'
+print(wlrfit1)
+'Baddeley logistic regression'
+print(lrbadd1)
+'ppm spatstat'
+print(ppmIPP1)
+```
+This can be compared to the true parameter values
+```{r}
+print(B)
+```
+
+```{r}
+```
+Given is a boxplot for the 1st slope value, for the covariate bio3.
+```{r}
+sdata <- summary(totfitIPP[,3])[c(1,2,4,5,6)]
+boxfitIPP <- list(stats=matrix(c(sdata[[1]],quantile(totfitIPP[,3],0.25),sdata[[3]],quantile(totfitIPP[,3],0.75),sdata[[5]]),5,1),n=10)
+sdata <- summary(totwlrfit[,3])[c(1,2,4,5,6)]
+boxwlrfit <- list(stats=matrix(c(sdata[[1]],quantile(totwlrfit[,3],0.25),sdata[[3]],quantile(totwlrfit[,3],0.75),sdata[[5]]),5,1),n=10)
+sdata <- summary(totlrbadd[,3])[c(1,2,4,5,6)]
+boxlrbadd <- list(stats=matrix(c(sdata[[1]],quantile(totlrbadd[,3],0.25),sdata[[3]],quantile(totlrbadd[,3],0.75),sdata[[5]]),5,1),n=10)
+sdata <- summary(totppmIPP[,3])[c(1,2,4,5,6)]
+boxppmIPP <- list(stats=matrix(c(sdata[[1]],quantile(totppmIPP[,3],0.25),sdata[[3]],quantile(totppmIPP[,3],0.75),sdata[[5]]),5,1),n=10)
+box<-list(stats=cbind(boxfitIPP$stats,boxwlrfit$stats,boxlrbadd$stats,boxppmIPP$stats),n=c(boxfitIPP$n,boxwlrfit$n,boxlrbadd$n,boxppmIPP$n))
+bp<-bxp(box,log="y",show.names=FALSE)
+bxp(box,log="y",show.names=FALSE)
+axis(1,at=bp,labels=c("IPP","weighted log","Baddeley","ppm spatstat"))
+abline(h=B[3],col="Red")
+
+```
+```{r}
+summary.IPP <- matrix(0,6,6)
+summary.IPP[1,] <- summary(totfitIPP[,1])
+summary.IPP[2,]<- summary(totfitIPP[,2])
+summary.IPP[3,] <- summary(totfitIPP[,3])
+summary.IPP[4,] <- summary(totfitIPP[,4])
+summary.IPP[5,]<- summary(totfitIPP[,5])
+summary.IPP[6,] <- summary(totfitIPP[,6])
+
+summary.IPPBT <- matrix(0,6,6)
+summary.IPPBT[1,] <- summary(totfitIPPBT[,1])
+summary.IPPBT[2,]<- summary(totfitIPPBT[,2])
+summary.IPPBT[3,] <- summary(totfitIPPBT[,3])
+summary.IPPBT[4,] <- summary(totfitIPPBT[,4])
+summary.IPPBT[5,]<- summary(totfitIPPBT[,5])
+summary.IPPBT[6,] <- summary(totfitIPPBT[,6])
+
+
+summary.wlr <- matrix(0,6,6)
+summary.wlr[1,] <- summary(totwlrfit[,1])
+summary.wlr[2,] <- summary(totwlrfit[,2])
+summary.wlr[3,] <- summary(totwlrfit[,3])
+summary.wlr[4,] <- summary(totwlrfit[,4])
+summary.wlr[5,] <- summary(totwlrfit[,5])
+summary.wlr[6,] <- summary(totwlrfit[,6])
+
+summary.lr <- matrix(0,6,6)
+summary.lr[1,] <- summary(totlrbadd[,1])
+summary.lr[2,] <- summary(totlrbadd[,2])
+summary.lr[3,] <- summary(totlrbadd[,3])
+summary.lr[4,] <- summary(totlrbadd[,4])
+summary.lr[5,] <- summary(totlrbadd[,5])
+summary.lr[6,] <- summary(totlrbadd[,6])
+
+summary.ppm <- matrix(0,6,6)
+summary.ppm[1,] <- summary(totppmIPP[,1])
+summary.ppm[2,] <- summary(totppmIPP[,2])
+summary.ppm[3,] <- summary(totppmIPP[,3])
+summary.ppm[4,] <- summary(totppmIPP[,4])
+summary.ppm[5,] <- summary(totppmIPP[,5])
+summary.ppm[6,] <- summary(totppmIPP[,6])
+
+
+```
+Given is also the total running time for each method for 32400 background/quadrature points
+```{r}
+'IPP'
+tmfitIPP
+'weighted logistic regression'
+tmwlrfit
+'Baddeley logistic regression'
+tmlrbadd
+'ppm spatstat'
+tmppmIPP
+```
+We can also calculate the rmse for each fit
+```{r}
+rmsefitIPP=matrix(0,N)
+rmsefitIPPBT=matrix(0,N)
+rmsewlrfit=matrix(0,N)
+rmselrbadd=matrix(0,N)
+rmseppmIPP=matrix(0,N)
+for (i in 1:N){
+rmsefitIPP[i] <- rmse(B,totfitIPP[i,])
+rmsefitIPPBT[i] <- rmse(B,totfitIPPBT[i,])
+rmsewlrfit[i] <- rmse(B,totwlrfit[i,])
+rmselrbadd[i] <- rmse(B,totlrbadd[i,])
+rmseppmIPP[i] <- rmse(B,totppmIPP[i,])
+
+}
+
+
+```
