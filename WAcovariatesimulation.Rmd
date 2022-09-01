@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 We first extract the 19 bioclimatic bariables from worldclim data using the getData function (raster), picking the location of Margaret River WA as our study area.
 ```{r,warning=FALSE}
 library(raster)
-library(mapview)
+#library(mapview)
 library(usdm)
 library(spatstat)
 library(maptools)
@@ -24,7 +24,7 @@ set.seed(2)
 We can choose to eliminate some of these covariates that are highly collerated using vifstep
 ```{r}
 bioclim<-raster::getData('worldclim',var='bio',res=0.5,lon=115,lat=-34)
-vifstep(bioclim,th=5)
+#vifstep(bioclim,th=5)
 ```
 We use these 5 covariates for our model, and select the number of background points we wish to use
 ```{r}
@@ -69,18 +69,20 @@ s<-scale(s,center=TRUE,scale=TRUE)
 ```
 ```{r}
 #set up background grid
-gridfactor <- 15
+gridfactor <- 40
 row <- ceiling(gridfactor*c((gridfactor+1)/(2*gridfactor)+0:(nrow(s)/gridfactor-1)))
 col <- ceiling(gridfactor*c((gridfactor+1)/(2*gridfactor)+0:(ncol(s)/gridfactor-1)))
 cellnum <- cellFromRowColCombine(s,row,col)
 #cellnum <- 1:ncell(s)
 sgrid.loc <- xyFromCell(s,cellnum)
+sgrid.loctot <- coordinates(s)
 sgrid.bio3 <- values(s)[,'bio3'][cellnum]
 sgrid.bio8 <- values(s)[,'bio8'][cellnum]
 sgrid.bio9 <- values(s)[,'bio9'][cellnum]
 sgrid.bio13 <- values(s)[,'bio13'][cellnum]
 sgrid.bio14 <- values(s)[,'bio14'][cellnum]
 X.back1 <- cbind(array(1,length(sgrid.bio3)),sgrid.bio3,sgrid.bio8,sgrid.bio9,sgrid.bio13,sgrid.bio14)
+X.back1tot <- cbind(array(1,length(s)),values(s))
 ```
 ```{r, include=FALSE}
 
@@ -152,6 +154,14 @@ covlist<-list(a=cov3,b=cov8,c=cov9,d=cov13,e=cov14)
     (-1)*sum(logL.pp)
  }
  
+  likelihoodIPPtot = function(param){
+    lambda = exp(X.back1tot %*% param)
+    mu = lambda * windowarea/nrow(X.back1tot)
+    logL.pp = sum(X.po %*% param,na.rm=TRUE) - sum(mu,na.rm=TRUE)
+    
+    (-1)*sum(logL.pp)
+ }
+ 
  #negative Poisson likelihood function (X.back specifies Berman Turner, with area.back giving the weights)
 
 likelihoodIPPBT = function(param){
@@ -161,6 +171,15 @@ likelihoodIPPBT = function(param){
   
   (-1)*sum(logL.pp)
 }
+
+likelihoodIPPBTtot = function(param){
+  lambda = exp(X.backtot %*% param)
+  mu = lambda * area.backtot
+  logL.pp = sum(X.po %*% param,na.rm=TRUE) - sum(mu,na.rm=TRUE)
+  
+  (-1)*sum(logL.pp)
+}
+ 
  
  #negative weighted logistic regression likelihood function
  weight=1000
@@ -169,10 +188,23 @@ likelihoodwlr <- function(param) {
     loglikewlr <- -(sum(X.po%*% param,na.rm=TRUE)-sum(log(1+alpha*exp(X.po%*% param)),na.rm=TRUE)-sum(weight*log(1+alpha*exp(X.back1%*% param)),na.rm=TRUE))
 }
 
+likelihoodwlrtot <- function(param) {
+    alpha<-windowarea/(weight*dim(X.back1tot)[1])
+    loglikewlr <- -(sum(X.po%*% param,na.rm=TRUE)-sum(log(1+alpha*exp(X.po%*% param)),na.rm=TRUE)-sum(weight*log(1+alpha*exp(X.back1tot%*% param)),na.rm=TRUE))
+}
+
+#negative baddeley regression likelihood function
+
+likelihoodblr <- function(param){
+  dum<-nrow(X.back1tot)/windowarea
+  loglikblr <- sum(log(exp(X.po%*%param)/(exp(X.po%*%param)+dum)))+sum(log(dum/(exp(X.back1tot%*%param)+dum)))
+  loglikblr
+
+}
+
 for (i in 1:N){
   
   #sample presence points
-  
   N.hpp <- rpois(1,maxlambda*windowarea)
   ind.hpp <- sample(1:ncell(s), size=N.hpp, replace=FALSE)
   loc.hpp <- s.loc[ind.hpp, ]
@@ -186,11 +218,16 @@ for (i in 1:N){
   
 #setting up Berman-Turner quadrature
   
-  X.back<- rbind(X.po,X.back1)
+  X.back <- rbind(X.po,X.back1)
+  X.backtot <- rbind(X.po,X.back1tot)
   s.loc.ipp=as.ppp(loc.ipp,W=w)
 sgrid.loc.ipp<-as.ppp(sgrid.loc,W=w)
 datadummy<-quadscheme(s.loc.ipp,sgrid.loc.ipp,method="grid")
 area.back <-w.quad(datadummy)
+
+sgrid.loc.ipptot<-as.ppp(sgrid.loctot,W=w)
+datadummytot<-quadscheme(s.loc.ipp,sgrid.loc.ipptot,method="grid")
+area.backtot <-w.quad(datadummytot)
   
 #fit Poisson likelihood
   
@@ -198,14 +235,14 @@ tm <- Sys.time()
 fitIPP <- optim(par=array(0,length(parameter)),fn=likelihoodIPP,method="BFGS")
 tmfitIPP=tmfitIPP+Sys.time()-tm
 totfitIPP[i,]=fitIPP$par
-maxllfitIPP[i,]<- -likelihoodIPP(totfitIPP[i,])-sum(log(1:N.ipp))
+
 
 #fit Poisson likelihood BT
 tm <- Sys.time()
 fitIPPBT <- optim(par=array(0,length(parameter)),fn=likelihoodIPPBT,method="BFGS")
 tmfitIPPBT=tmfitIPPBT+Sys.time()-tm
 totfitIPPBT[i,]=fitIPPBT$par
-maxllfitIPPBT[i,]<- -likelihoodIPPBT(totfitIPPBT[i,])-sum(log(1:N.ipp))
+maxllfitIPPBT[i,]<- -likelihoodIPPBTtot(totfitIPPBT[i,])-sum(log(1:N.ipp))
 
 #put covariates into dataframe for use in glm
 
@@ -222,7 +259,7 @@ maxllfitIPPBT[i,]<- -likelihoodIPPBT(totfitIPPBT[i,])-sum(log(1:N.ipp))
   lrbadd <- glm(V6~sgrid.bio3+sgrid.bio8+sgrid.bio9+sgrid.bio13+sgrid.bio14+offset(-offst),data=mydata,family="binomial")
    tmlrbadd=tmlrbadd+Sys.time()-tm
   totlrbadd[i,]=coefficients(lrbadd)
-  maxlllrbadd[i,]=logLik(lrbadd)
+  maxlllrbadd[i,]=likelihoodblr(totlrbadd[i,])
 
   #fit Weighted logistic regression
   
@@ -230,7 +267,7 @@ maxllfitIPPBT[i,]<- -likelihoodIPPBT(totfitIPPBT[i,])-sum(log(1:N.ipp))
   wlrfit <- optim(par=array(0,length(parameter)),fn=likelihoodwlr,method="BFGS")
    tmwlrfit=tmwlrfit+Sys.time()-tm
   totwlrfit[i,]=wlrfit$par
-  maxllwlrfit[i]<- -likelihoodwlr(totwlrfit[i,])-sum(log(1:N.ipp))
+  maxllwlrfit[i]<- -likelihoodwlrtot(totwlrfit[i,])-sum(log(1:N.ipp))
   
 # fit using ppm
   
@@ -271,13 +308,13 @@ print(B)
 Given is a boxplot for the 1st slope value, for the covariate bio3.
 ```{r}
 sdata <- summary(totfitIPP[,3])[c(1,2,4,5,6)]
-boxfitIPP <- list(stats=matrix(c(sdata[[1]],quantile(totfitIPP[,3],0.25),sdata[[3]],quantile(totfitIPP[,3],0.75),sdata[[5]]),5,1),n=10)
+boxfitIPP <- list(stats=matrix(c(sdata[[1]],quantile(totfitIPP[,3],0.05),sdata[[3]],quantile(totfitIPP[,3],0.95),sdata[[5]]),5,1),n=10)
 sdata <- summary(totwlrfit[,3])[c(1,2,4,5,6)]
-boxwlrfit <- list(stats=matrix(c(sdata[[1]],quantile(totwlrfit[,3],0.25),sdata[[3]],quantile(totwlrfit[,3],0.75),sdata[[5]]),5,1),n=10)
+boxwlrfit <- list(stats=matrix(c(sdata[[1]],quantile(totwlrfit[,3],0.05),sdata[[3]],quantile(totwlrfit[,3],0.95),sdata[[5]]),5,1),n=10)
 sdata <- summary(totlrbadd[,3])[c(1,2,4,5,6)]
-boxlrbadd <- list(stats=matrix(c(sdata[[1]],quantile(totlrbadd[,3],0.25),sdata[[3]],quantile(totlrbadd[,3],0.75),sdata[[5]]),5,1),n=10)
+boxlrbadd <- list(stats=matrix(c(sdata[[1]],quantile(totlrbadd[,3],0.05),sdata[[3]],quantile(totlrbadd[,3],0.95),sdata[[5]]),5,1),n=10)
 sdata <- summary(totppmIPP[,3])[c(1,2,4,5,6)]
-boxppmIPP <- list(stats=matrix(c(sdata[[1]],quantile(totppmIPP[,3],0.25),sdata[[3]],quantile(totppmIPP[,3],0.75),sdata[[5]]),5,1),n=10)
+boxppmIPP <- list(stats=matrix(c(sdata[[1]],quantile(totppmIPP[,3],0.05),sdata[[3]],quantile(totppmIPP[,3],0.95),sdata[[5]]),5,1),n=10)
 box<-list(stats=cbind(boxfitIPP$stats,boxwlrfit$stats,boxlrbadd$stats,boxppmIPP$stats),n=c(boxfitIPP$n,boxwlrfit$n,boxlrbadd$n,boxppmIPP$n))
 bp<-bxp(box,log="y",show.names=FALSE)
 bxp(box,log="y",show.names=FALSE)
