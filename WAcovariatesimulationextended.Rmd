@@ -1,0 +1,150 @@
+---
+title: "WAcovariatesimulationextended"
+author: "Sean Bellew"
+date: "25/05/2020"
+output:
+html_document: default
+pdf_document: default
+word_document: default
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+We first extract the 19 bioclimatic bariables from worldclim data using the getData function (raster), picking the location of Margaret River WA as our study area.
+```{r}
+library(raster)
+library(mapview)
+library(usdm)
+bioclim<-getData('worldclim',var='bio',res=0.5,lon=115,lat=-34)
+```
+We can choose to eliminate some of these covariates that are highly collerated using vifstep
+```{r}
+vifstep(bioclim,th=5)
+```
+We use these 5 covariates for our model
+```{r}
+bioclim<-bioclim[[c(3,8,9,13,14)]]
+bio3<-subset(bioclim,1,drop=TRUE)
+bio8<-subset(bioclim,2,drop=TRUE)
+bio9<-subset(bioclim,3,drop=TRUE)
+bio13<-subset(bioclim,4,drop=TRUE)
+bio14<-subset(bioclim,5,drop=TRUE)
+```
+We set up our grid next, and also normalise our covariates
+```{r}
+s <- raster(ncol=ncol(bioclim), nrow=nrow(bioclim), xmn=xmin(bioclim), xmx=xmax(bioclim), ymn=ymin(bioclim), ymx=ymax(bioclim))
+s.loc <- xyFromCell(s, 1:ncell(s))
+windowarea <- (xmax(bioclim)-xmin(bioclim))*(ymax(bioclim)-ymin(bioclim))
+```
+```{r}
+r<-raster(s)
+values(r) <- values(bio3)
+names(r) <- 'bio3'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio8)
+names(r) <- 'bio8'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio9)
+names(r) <- 'bio9'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio13)
+names(r) <- 'bio13'
+s <- addLayer(s, r)
+r<-raster(s)
+values(r) <- values(bio14)
+names(r) <- 'bio14'
+s <- addLayer(s, r)
+s<-scale(s,center=TRUE,scale=TRUE)
+```
+```{r, include=FALSE}
+gridfactor=2
+sgrid <- aggregate(s, fact=gridfactor, fun=mean)
+sgrid.loc <- xyFromCell(sgrid, 1:ncell(sgrid))
+sgrid.bio3 <- values(sgrid)[,'bio3']
+sgrid.bio8 <- values(sgrid)[,'bio8']
+sgrid.bio9 <- values(sgrid)[,'bio9']
+sgrid.bio13 <- values(sgrid)[,'bio13']
+sgrid.bio14 <- values(sgrid)[,'bio14']
+X.back <- cbind(array(1,length(sgrid.bio3)),sgrid.bio3,sgrid.bio8,sgrid.bio9,sgrid.bio13,sgrid.bio14)
+```
+We want to select our parameter values so the mean number of points over the window is greater than 1000. This was done rather ad hoc using the mean value of the intensity function, factoring in the NA values also.
+```{r}
+
+X <- cbind(array(1,dim(s)[1]*dim(s)[2]),values(s)[,'bio3'],values(s)[,'bio8'],values(s)[,'bio9'],values(s)[,'bio13'],values(s)[,'bio14'])
+gridsizeratio=sum(!is.na(X))/length(X)
+parameter <- 530*c(0.002,0.001,0.003,-0.001,0.002,-0.0005)
+B <- parameter
+values(s) <- exp(X%*%B)
+maxlambda <- max(values(s),na.rm=TRUE)
+``` 
+Now simulate 1000 times and average the fits (some difficulty here using lapply). There is an error message about the unmatched '}', and I am also unsure how to specify the output of the function (ie the fits).
+```{r}
+N <- 10
+Reduce('+', lapply(1:N, function(n) {
+  N.hpp <- rpois(1,maxlambda*windowarea)
+  ind.hpp <- sample(1:ncell(s), size=N.hpp, replace=FALSE)
+  loc.hpp <- s.loc[ind.hpp, ]
+  lambda.hpp <- values(s)[ind.hpp]
+  ind.ipp <- runif(N.hpp, 0,1) <= lambda.hpp/maxlambda
+  N.ipp <- sum(ind.ipp,na.rm=TRUE)
+  loc.ipp <- loc.hpp[ind.ipp, ]
+  X.po <- X[ind.hpp[ind.ipp], ]
+  X.poslope<-X.po[,2:length(parameter)]
+
+  likelihoodIPP = function(param){
+    lambda = exp(X.back %*% param)
+    mu = lambda * windowarea/dim(X.back)[1]
+    logL.pp = sum(X.po %*% param,na.rm=TRUE) - sum(mu,na.rm=TRUE)
+    
+    (-1)*sum(logL.pp,na.rm=TRUE)
+    
+  }
+
+  fitIPP <- optim(par=parameter+array(0.00001,length(parameter)),fn=likelihoodIPP)
+  return(fitIPP)
+}))/N
+```
+```{r}
+N <- 10
+Reduce('+', lapply(1:N, function(n) {
+  dummyintensity <- max(500,4*N.ipp/windowarea)
+  N.dpp <- rpois(1,dummyintensity*windowarea)
+  ind.dpp <- sample(1:ncell(s), size=N.dpp, replace=FALSE)
+  X.dpp <- X[ind.dpp,]
+  X.dpp<-X.dpp[,2:length(parameter)]
+  X.dpp <-cbind(X.dpp,array(0,dim(X.dpp)[1]))
+  X.polr <-cbind(X.poslope,array(1,dim(X.poslope)[1]))
+  mydata <- rbind(X.polr,X.dpp)
+  offst <- array(log(dummyintensity),dim(mydata)[1])
+  mydata <- as.data.frame(mydata)
+  lrbadd <- glm(V6~V1+V2+V3+V4+V5+offset(-offst),data=mydata,family="binomial")
+  weight <- 10000
+  likelihoodwlr <- function(param) {
+  
+    -sum(log(windowarea/(weight*dim(X.back)[1]))+X.po%*% param,na.rm=TRUE)-sum(log(1+windowarea/(weight*dim(X.back)[1])*exp(X.po%*% param)),na.rm=TRUE)-sum(weight*log(1+windowarea/(weight*dim(X.back)[1])*exp(X.back%*% param)),na.rm=TRUE)
+  }
+  wlrfit <- optim(par=parameter+array(0.00001,length(parameter)),fn=likelihoodwlr)
+  return(wlrfit)
+}))/N
+```
+
+We now wish to check this with spatstat
+```{r}
+library(spatstat)
+N.hpp <- rpois(1,maxlambda*windowarea)
+ind.hpp <- sample(1:ncell(s), size=N.hpp, replace=FALSE)
+loc.hpp <- s.loc[ind.hpp, ]
+lambda.hpp <- values(s)[ind.hpp]
+ind.ipp <- runif(N.hpp, 0,1) <= lambda.hpp/maxlambda
+N.ipp <- sum(ind.ipp,na.rm=TRUE)
+loc.ipp <- loc.hpp[ind.ipp, ]
+w=as.owin(c(90,120,-60,-30))
+loc=as.ppp(loc.ipp,W=w)
+cov=as.data.frame(X[,2:6])
+fitspatstat=ppm(loc~V1+V2+V3+V4+V5,covariates=cov)
+```
+I am unsure about this error message; my understanding is a quadrature scheme is generated within ppm so I'm unsure how to rectify this (maybe the NA in the covariates?)
