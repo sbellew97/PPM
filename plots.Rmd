@@ -1,0 +1,288 @@
+---
+title: "figures"
+author: "Sean Bellew"
+date: "22/09/2020"
+output: pdf_document
+---
+In each of these plots the IPP result with gridded quadrature only is coinciding with the weighted logistic regression (orange/red) and the IPP with Berman-Turner quadrature is coinciding with the ppm fit (green/purple)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r,echo=FALSE}
+resolution <- 0.5*c(1,3,5,9,12,15,20,30,40)
+B <- c(5,0.2,0.3,-0.2,0.26,-0.2)
+load(file='sumdf.Rda')
+load(file='sumdfmis.Rda')
+load(file='rmseloglik.Rda')
+load(file='rmseloglikmis.Rda')
+i=0
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(4.97,5.04),type="o",col='orange',main="intercept",xlab="resolution (arcminutes)",ylab="estimate")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='green')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("Baddeley","IPP/IWLR","IPP-BT"), fill=c('blue','red',"green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+```
+
+```{r,echo=FALSE}
+i=1
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(0.1,0.35),type="o",col='orange',main="slope 1 estimate",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="purple",angle=90)
+
+```
+
+```{r,echo=FALSE}
+i=2
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(0.2,0.47),type="o",col='orange',main="slope 2 estimate",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="purple",angle=90)
+
+```
+
+```{r,echo=FALSE}
+i=3
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(-0.3,-0.06),type="o",col='orange',main="slope 3 estimate",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="purple",angle=90)
+
+```
+
+```{r,echo=FALSE}
+i=4
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(0.18,0.38),type="o",col='orange',main="slope 4 estimate",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="purple",angle=90)
+
+```
+
+```{r,echo=FALSE}
+i=5
+plot(resolution,summarydf[i+c(1+6*c(0:6)),4],ylim=c(-0.3,-0.05),type="o",col='orange',main="slope 5 estimate",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydf[i+42+c(1+6*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydf[i+84+c(1+6*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydf[i+126+c(1+6*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydf[i+168+c(1+6*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydf[i+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+c(1+6*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydf[i+42+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+42+c(1+6*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydf[i+84+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+84+c(1+6*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydf[i+126+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+126+c(1+6*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydf[i+168+c(1+6*c(0:6)),2], x1=resolution, y1=summarydf[i+168+c(1+6*c(0:6)),5], code=3, col="purple",angle=90)
+
+```
+```{r,echo=FALSE}
+#rmse v resolution
+
+plot(resolution,finaldf1[1:7,'rmse'],ylim=c(1.1,1.93),type='o',col='orange',main="rmse",xlab="Resolution (arcminutes)",ylab="rmse")
+lines(resolution,finaldf1[8:14,'rmse'],type='o',col='green')
+lines(resolution,finaldf1[15:21,'rmse'],type="o",col='red')
+lines(resolution,finaldf1[22:28,'rmse'],type='o',col='blue')
+lines(resolution,finaldf1[29:35,'rmse'],type='o',col='purple')
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+```
+```{r,echo=FALSE}
+#loglikelihood v resolution
+
+plot(resolution,finaldf1[1:7,'loglikelihood'],ylim=c(-3015,-2978),type="o",col='orange',main="loglikelihood",xlab="Resolution (arcminutes)",ylab="loglikelihood")
+lines(resolution,finaldf1[8:14,'loglikelihood'],type='o',col='green')
+lines(resolution,finaldf1[15:21,'loglikelihood'],type='o',col='red')
+lines(resolution,1/500*finaldf1[22:28,'loglikelihood']-2993-1/500*finaldf1[22,'loglikelihood'],type='o',col='blue')
+legend("topleft",c("Baddeley","IPP","IPP-BT","IWLR"), fill=c('blue','red',"green","orange"),bty="n" )
+```
+
+```{r,,echo=FALSE}
+i=0
+B <- c(5,0.3,-0.2,0.26,-0.2)
+plot(resolution,summarydfmis[i+c(1+5*c(0:6)),4],ylim=c(4.987,5.04),type="o",col='red',main="intercept",xlab="resolution (arcminutes)",ylab="estimate")
+lines(resolution,summarydfmis[i+35+c(1+5*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydfmis[i+105+c(1+5*c(0:6)),4],type='o',col='blue')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("Baddeley","IPP/IWLR","IPP-BT"), fill=c('blue','red',"green"),bty="n" )
+arrows(x0=resolution, y0=summarydfmis[i+35+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+35+c(1+5*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+70+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+70+c(1+5*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+105+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+105+c(1+5*c(0:6)),5], code=3, col="blue",angle=90)
+```
+
+
+```{r,,echo=FALSE}
+i=1
+plot(resolution,summarydfmis[i+c(1+5*c(0:6)),4],ylim=c(0.1,0.46),type="o",col='orange',main="slope 1 estimate misspecified",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydfmis[i+35+c(1+5*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydfmis[i+70+c(1+5*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydfmis[i+105+c(1+5*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydfmis[i+140+c(1+5*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydfmis[i+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+c(1+5*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+35+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+35+c(1+5*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+70+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+70+c(1+5*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+105+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+105+c(1+5*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+140+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+140+c(1+5*c(0:6)),5], code=3, col="purple",angle=90)
+```
+```{r,,echo=FALSE}
+i=2
+plot(resolution,summarydfmis[i+c(1+5*c(0:6)),4],ylim=c(-0.3,-0.05),type="o",col='orange',main="slope 2 estimate misspecified",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydfmis[i+35+c(1+5*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydfmis[i+70+c(1+5*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydfmis[i+105+c(1+5*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydfmis[i+140+c(1+5*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydfmis[i+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+c(1+5*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+35+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+35+c(1+5*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+70+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+70+c(1+5*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+105+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+105+c(1+5*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+140+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+140+c(1+5*c(0:6)),5], code=3, col="purple",angle=90)
+```
+```{r,echo=FALSE}
+i=3
+plot(resolution,summarydfmis[i+c(1+5*c(0:6)),4],ylim=c(0.1,0.4),type="o",col='orange',main="slope 3 estimate misspecified",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydfmis[i+35+c(1+5*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydfmis[i+70+c(1+5*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydfmis[i+105+c(1+5*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydfmis[i+140+c(1+5*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydfmis[i+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+c(1+5*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+35+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+35+c(1+5*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+70+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+70+c(1+5*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+105+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+105+c(1+5*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+140+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+140+c(1+5*c(0:6)),5], code=3, col="purple",angle=90)
+```
+```{r,echo=FALSE}
+i=4
+plot(resolution,summarydfmis[i+c(1+5*c(0:6)),4],ylim=c(-0.21,-0.04),type="o",col='orange',main="slope 4 estimate misspecified",xlab="Resolution (arcminutes)",ylab="bio8 term")
+lines(resolution,summarydfmis[i+35+c(1+5*c(0:6)),4],type='o',col='green')
+lines(resolution,summarydfmis[i+70+c(1+5*c(0:6)),4],type='o',col='red')
+lines(resolution,summarydfmis[i+105+c(1+5*c(0:6)),4],type='o',col='blue')
+lines(resolution,summarydfmis[i+140+c(1+5*c(0:6)),4],type='o',col='purple')
+
+abline(h=B[i+1],col="black")
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+arrows(x0=resolution, y0=summarydfmis[i+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+c(1+5*c(0:6)),5], code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+35+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+35+c(1+5*c(0:6)),5], code=3, col="green",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+70+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+70+c(1+5*c(0:6)),5], code=3, col="red",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+105+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+105+c(1+5*c(0:6)),5], code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=summarydfmis[i+140+c(1+5*c(0:6)),2], x1=resolution, y1=summarydfmis[i+140+c(1+5*c(0:6)),5], code=3, col="purple",angle=90)
+```
+
+```{r,echo=FALSE}
+#rmse v resolution
+
+plot(resolution,finaldfmis[1:7,'rmse'],ylim=c(1.4,3.2),type='o',col='orange',main="rmse misspecified",xlab="Resolution (arcminutes)",ylab="rmse")
+lines(resolution,finaldfmis[8:14,'rmse'],type='o',col='green')
+lines(resolution,finaldfmis[15:21,'rmse'],type="o",col='red')
+lines(resolution,finaldfmis[22:28,'rmse'],type='o',col='blue')
+lines(resolution,finaldfmis[29:35,'rmse'],type='o',col='purple')
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+
+#loglikelihood v resolution
+
+plot(resolution,finaldfmis[1:7,'loglikelihood'],ylim=c(-3030,-2985),type="o",col='orange',main="loglikelihood misspecified",xlab="Resolution (arcminutes)",ylab="loglikelihood")
+lines(resolution,finaldfmis[8:14,'loglikelihood'],type='o',col='green')
+lines(resolution,finaldfmis[15:21,'loglikelihood'],type='o',col='red')
+lines(resolution,1/500*finaldfmis[22:28,'loglikelihood']+finaldfmis[1,'loglikelihood']-1/500*finaldfmis[22,'loglikelihood'],type='o',col='blue')
+lines(resolution,finaldfmis[29:35,'loglikelihood'],type='o',col='purple')
+legend("topleft",c("ppm","weighted log","Baddeley","IPP","IPPBT"), fill=c("purple","red","blue","orange","green"),bty="n" )
+
+
+
+
+
+
+
+plot(resolution,ylim=c(0.017,0.28),c(mean(rmsefitIPP1),mean(rmsefitIPP3),mean(rmsefitIPP5),mean(rmsefitIPP9),mean(rmsefitIPP12),mean(rmsefitIPP15),mean(rmsefitIPP20),mean(rmsefitIPP30),mean(rmsefitIPP40)),type="o",col='orange',main="RMSE",xlab="resolution (arcminutes)",ylab="RMSE")
+legend("topleft",c("IWLR","BLR","IPP-GR","IPP-BT"), fill=c("red","blue","orange","green"),bty="n" )
+lines(resolution,c(mean(rmselrbadd1),mean(rmselrbadd3),mean(rmselrbadd5),mean(rmselrbadd9),mean(rmselrbadd12),mean(rmselrbadd15),mean(rmselrbadd20),mean(rmselrbadd30),mean(rmselrbadd40)),type="o",col='blue',main="RMSE",xlab="resolution (arcminutes)",ylab="RMSE")
+lines(resolution,c(mean(rmsefitIPPBT1),mean(rmsefitIPPBT3),mean(rmsefitIPPBT5),mean(rmsefitIPPBT9),mean(rmsefitIPPBT12),mean(rmsefitIPPBT15),mean(rmsefitIPPBT20),mean(rmsefitIPPBT30),mean(rmsefitIPPBT40)),type="o",col='green',main="RMSE",xlab="resolution (arcminutes)",ylab="RMSE")
+lines(resolution,c(mean(rmsewlrfit1),mean(rmsewlrfit3),mean(rmsewlrfit5),mean(rmsewlrfit9),mean(rmsewlrfit12),mean(rmsewlrfit15),mean(rmsewlrfit20),mean(rmsewlrfit30),mean(rmsewlrfit40)),type="o",col='red',main="RMSE",xlab="resolution (arcminutes)",ylab="RMSE")
+arrows(x0=resolution, y0=c(quantile(rmsefitIPP1,0.05), quantile(rmsefitIPP3,0.05),quantile(rmsefitIPP5,0.05),quantile(rmsefitIPP9,0.05),quantile(rmsefitIPP12,0.05),quantile(rmsefitIPP15,0.05),quantile(rmsefitIPP20,0.05),quantile(rmsefitIPP30,0.05),quantile(rmsefitIPP40,0.05)),x1=resolution, y1=c(quantile(rmsefitIPP1,0.95), quantile(rmsefitIPP3,0.95),quantile(rmsefitIPP5,0.95),quantile(rmsefitIPP9,0.95),quantile(rmsefitIPP12,0.95),quantile(rmsefitIPP15,0.95),quantile(rmsefitIPP20,0.95),quantile(rmsefitIPP30,0.95),quantile(rmsefitIPP40,0.95)), code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=c(quantile(rmselrbadd1,0.05), quantile(rmselrbadd3,0.05),quantile(rmselrbadd5,0.05),quantile(rmselrbadd9,0.05),quantile(rmselrbadd12,0.05),quantile(rmselrbadd15,0.05),quantile(rmselrbadd20,0.05),quantile(rmselrbadd30,0.05),quantile(rmselrbadd40,0.05)),x1=resolution, y1=c(quantile(rmselrbadd1,0.95), quantile(rmselrbadd3,0.95),quantile(rmselrbadd5,0.95),quantile(rmselrbadd9,0.95),quantile(rmselrbadd12,0.95),quantile(rmselrbadd15,0.95),quantile(rmselrbadd20,0.95),quantile(rmselrbadd30,0.95),quantile(rmselrbadd40,0.95)), code=3, col="blue",angle=90)
+arrows(x0=resolution, y0=c(quantile(rmsefitIPPBT1,0.05), quantile(rmsefitIPPBT3,0.05),quantile(rmsefitIPPBT5,0.05),quantile(rmsefitIPPBT9,0.05),quantile(rmsefitIPPBT12,0.05),quantile(rmsefitIPPBT15,0.05),quantile(rmsefitIPPBT20,0.05),quantile(rmsefitIPPBT30,0.05),quantile(rmsefitIPPBT40,0.05)),x1=resolution, y1=c(quantile(rmsefitIPPBT1,0.95), quantile(rmsefitIPPBT3,0.95),quantile(rmsefitIPPBT5,0.95),quantile(rmsefitIPPBT9,0.95),quantile(rmsefitIPPBT12,0.95),quantile(rmsefitIPPBT15,0.95),quantile(rmsefitIPPBT20,0.95),quantile(rmsefitIPPBT30,0.95),quantile(rmsefitIPPBT40,0.95)), code=3, col="green",angle=90)
+arrows(x0=resolution, y0=c(quantile(rmsewlrfit1,0.05),quantile(rmsewlrfit3,0.05),quantile(rmsewlrfit5,0.05),quantile(rmsewlrfit9,0.05),quantile(rmsewlrfit12,0.05),quantile(rmsewlrfit15,0.05),quantile(rmsewlrfit20,0.05),quantile(rmsewlrfit30,0.05),quantile(rmsewlrfit40,0.05)),x1=resolution, y1=c(quantile(rmsewlrfit1,0.95),quantile(rmsewlrfit3,0.95),quantile(rmsewlrfit5,0.95),quantile(rmsewlrfit9,0.95),quantile(rmsewlrfit12,0.95),quantile(rmsewlrfit15,0.95),quantile(rmsewlrfit20,0.95),quantile(rmsewlrfit30,0.95),quantile(rmsewlrfit40,0.95)), code=3, col="red",angle=90)
+
+plot(resolution,ylim=c(-3085,-2990),c(mean(maxllfitIPP1),mean(maxllfitIPP3),mean(maxllfitIPP5),mean(maxllfitIPP9),mean(maxllfitIPP12),mean(maxllfitIPP15),mean(maxllfitIPP20),mean(maxllfitIPP30),mean(maxllfitIPP40)),type="o",col='orange',main="log-likelihood",xlab="resolution (arcminutes)",ylab="log-likelihood")
+legend("bottomleft",c("IWLR","BLR","IPP-GR","IPP-BT"), fill=c("red","blue","orange","green"),bty="n" )
+lines(resolution,4631.675+c(mean(maxlllrbadd1),mean(maxlllrbadd3),mean(maxlllrbadd5),mean(maxlllrbadd9),mean(maxlllrbadd12),mean(maxlllrbadd15),mean(maxlllrbadd20),mean(maxlllrbadd30),mean(maxlllrbadd40)),type="o",col='blue')
+lines(resolution,c(mean(maxllfitIPPBT1),mean(maxllfitIPPBT3),mean(maxllfitIPPBT5),mean(maxllfitIPPBT9),mean(maxllfitIPPBT12),mean(maxllfitIPPBT15),mean(maxllfitIPPBT20),mean(maxllfitIPPBT30),mean(maxllfitIPPBT40)),type="o",col='green')
+lines(resolution,c(mean(maxllwlrfit1),mean(maxllwlrfit3),mean(maxllwlrfit5),mean(maxllwlrfit9),mean(maxllwlrfit12),mean(maxllwlrfit15),mean(maxllwlrfit20),mean(maxllwlrfit30),mean(maxllwlrfit40)),type="o",col='red')
+
+```
+```{r}
+plot(resolution,ylim=c(0.5,0.6),c(mean(aucppmIPP1),mean(aucppmIPP3),mean(aucppmIPP5),mean(aucppmIPP9),mean(aucppmIPP10),mean(aucppmIPP12),mean(aucppmIPP15)),type='o',col='green',xlab='resolution (arcminutes)',ylab='AUC',main='AUC')
+lines(resolution,c(mean(aucwlrfit1),mean(aucwlrfit3),mean(aucwlrfit5),mean(aucwlrfit9),mean(aucwlrfit10),mean(aucwlrfit12),mean(aucwlrfit15)),type='o',col='red')
+lines(resolution,c(mean(auclrbadd1),mean(auclrbadd3),mean(auclrbadd5),mean(auclrbadd9),mean(auclrbadd10),mean(auclrbadd12),mean(auclrbadd15)),type='o',col='blue')
+legend("topleft",c("Baddeley","IPP/IWLR","IPP-BT"), fill=c('blue','red',"green"),bty="n" )
+arrows(x0=resolution, y0=c(quantile(aucppmIPP1,0.05),quantile(aucppmIPP3,0.05),quantile(aucppmIPP5,0.05),quantile(aucppmIPP9,0.05),quantile(aucppmIPP10,0.05),quantile(aucppmIPP12,0.05),quantile(aucppmIPP15,0.05)), x1=resolution, y1=c(quantile(aucppmIPP1,0.95),quantile(aucppmIPP3,0.95),quantile(aucppmIPP5,0.95),quantile(aucppmIPP9,0.95),quantile(aucppmIPP10,0.95),quantile(aucppmIPP12,0.95),quantile(aucppmIPP15,0.95)), code=3, col="red",angle=90)
+arrows(x0=resolution, y0=c(quantile(auclrbadd1,0.05),quantile(auclrbadd3,0.05),quantile(auclrbadd5,0.05),quantile(auclrbadd9,0.05),quantile(auclrbadd10,0.05),quantile(auclrbadd12,0.05),quantile(auclrbadd15,0.05)), x1=resolution, y1=c(quantile(auclrbadd1,0.95),quantile(auclrbadd3,0.95),quantile(auclrbadd5,0.95),quantile(auclrbadd9,0.95),quantile(auclrbadd10,0.95),quantile(auclrbadd12,0.95),quantile(auclrbadd15,0.95)), code=3, col="red",angle=90)
+arrows(x0=resolution, y0=c(quantile(aucwlrfit1,0.05),quantile(aucwlrfit3,0.05),quantile(aucwlrfit5,0.05),quantile(aucwlrfit9,0.05),quantile(aucwlrfit10,0.05),quantile(aucwlrfit12,0.05),quantile(aucwlrfit15,0.05)), x1=resolution, y1=c(quantile(aucwlrfit1,0.95),quantile(aucwlrfit3,0.95),quantile(aucwlrfit5,0.95),quantile(aucwlrfit9,0.95),quantile(aucwlrfit10,0.95),quantile(aucwlrfit12,0.95),quantile(aucwlrfit15,0.95)), code=3, col="red",angle=90)
+```
+```{r}
+i=1
+j=4
+plot(resolution,c(summaryfitIPP1[i,j],summaryfitIPP3[i,j],summaryfitIPP5[i,j],summaryfitIPP9[i,j],summaryfitIPP12[i,j],summaryfitIPP15[i,j],summaryfitIPP20[i,j],summaryfitIPP30[i,j],summaryfitIPP40[i,j]),ylim=c(4.97,5.04),type="o",col='orange',main="intercept",xlab="resolution (arcminutes)",ylab="estimate")
+lines(resolution,c(summaryfitIPPBT1[i,j],summaryfitIPPBT3[i,j],summaryfitIPPBT5[i,j],summaryfitIPPBT9[i,j],summaryfitIPPBT12[i,j],summaryfitIPPBT15[i,j],summaryfitIPPBT20[i,j],summaryfitIPPBT30[i,j],summaryfitIPPBT40[i,j]),type="o",col='green')
+lines(resolution,c(summarywlrfit1[i,j],summarywlrfit3[i,j],summarywlrfit5[i,j],summarywlrfit9[i,j],summarywlrfit12[i,j],summarywlrfit15[i,j],summarywlrfit20[i,j],summarywlrfit30[i,j],summarywlrfit40[i,j]),type="o",col='red')
+lines(resolution,c(summarylrbadd1[i,j],summarylrbadd3[i,j],summarylrbadd5[i,j],summarylrbadd9[i,j],summarylrbadd12[i,j],summarylrbadd15[i,j],summarylrbadd20[i,j],summarylrbadd30[i,j],summarylrbadd40[i,j]),type="o",col='blue')
+abline(h=5,col="black")
+legend("topleft",c("IWLR","BLR","IPP-GR","IPP-BT"), fill=c("red","blue","orange","green"),bty="n" )
+
+arrows(x0=resolution, y0=c(summaryfitIPP1[i,2],summaryfitIPP3[i,2],summaryfitIPP5[i,2],summaryfitIPP9[i,2],summaryfitIPP12[i,2],summaryfitIPP15[i,2],summaryfitIPP20[i,2],summaryfitIPP30[i,2],summaryfitIPP40[i,2]), x1=resolution, y1=c(summaryfitIPP1[i,5],summaryfitIPP3[i,5],summaryfitIPP5[i,5],summaryfitIPP9[i,5],summaryfitIPP12[i,5],summaryfitIPP15[i,5],summaryfitIPP20[i,5],summaryfitIPP30[i,5],summaryfitIPP40[i,5]), code=3, col="orange",angle=90)
+arrows(x0=resolution, y0=c(summaryfitIPPBT1[i,2],summaryfitIPPBT3[i,2],summaryfitIPPBT5[i,2],summaryfitIPPBT9[i,2],summaryfitIPPBT12[i,2],summaryfitIPPBT15[i,2],summaryfitIPPBT20[i,2],summaryfitIPPBT30[i,2],summaryfitIPPBT40[i,2]), x1=resolution, y1=c(summaryfitIPPBT1[i,5],summaryfitIPPBT3[i,5],summaryfitIPPBT5[i,5],summaryfitIPPBT9[i,5],summaryfitIPPBT12[i,5],summaryfitIPPBT15[i,5],summaryfitIPPBT20[i,5],summaryfitIPPBT30[i,5],summaryfitIPPBT40[i,5]), code=3, col="green",angle=90)
+arrows(x0=resolution, y0=c(summarywlrfit1[i,2],summarywlrfit3[i,2],summarywlrfit5[i,2],summarywlrfit9[i,2],summarywlrfit12[i,2],summarywlrfit15[i,2],summarywlrfit20[i,2],summarywlrfit30[i,2],summarywlrfit40[i,2]), x1=resolution, y1=c(summarywlrfit1[i,5],summarywlrfit3[i,5],summarywlrfit5[i,5],summarywlrfit9[i,5],summarywlrfit12[i,5],summarywlrfit15[i,5],summarywlrfit20[i,5],summarywlrfit30[i,5],summarywlrfit40[i,5]), code=3, col="red",angle=90)
+arrows(x0=resolution, y0=c(summarylrbadd1[i,2],summarylrbadd3[i,2],summarylrbadd5[i,2],summarylrbadd9[i,2],summarylrbadd12[i,2],summarylrbadd15[i,2],summarylrbadd20[i,2],summarylrbadd30[i,2],summarylrbadd40[i,2]), x1=resolution, y1=c(summarylrbadd1[i,5],summarylrbadd3[i,5],summarylrbadd5[i,5],summarylrbadd9[i,5],summarylrbadd12[i,5],summarylrbadd15[i,5],summarylrbadd20[i,5],summarylrbadd30[i,5],summarylrbadd40[i,5]), code=3, col="blue",angle=90)
+```
