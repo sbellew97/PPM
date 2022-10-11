@@ -14,7 +14,8 @@ set.seed(2)
 # parameters in the script
 # desaggregate_threshold <- 10 / 60
 desaggregate_threshold <- 0 # larger values mean we remove presence points that are too close to one another
-resolutions <- c(1, 2, 5, 7, 10, 20, 30, 40, 50, 60) / 60 # different resolutions considered (in arcminutes)
+# resolutions <- c(1, 2, 5, 7, 10, 20, 30, 40, 50, 60) / 60 # different resolutions considered (in arcminutes)
+npoints <- floor(exp(seq(from = 4, to = 10, by = 0.25))) # number of background points to consider
 
 ##########################################
 # load presence data with initial analysis
@@ -94,11 +95,12 @@ configuration_val <- ppp(x = dat.val.thin$x,
                          y = dat.val.thin$y, 
                          window = victoriapixel)
 
-result <- lapply(resolutions, function(res) {
+result <- lapply(npoints, function(n) {
   ################################################################################################################
   # selecting grid points from total background raster (grid resolution = resolution(covraster.coarse)*gridfactor)
   ################################################################################################################
-  
+  windowarea <- volume(configuration$window)
+  res <- sqrt(windowarea / n)
   cov <- values(covraster.coarse_extended)
   # gridfactor controls how many of the background points we keep
   gridfactor <- res / mean(res(covraster.coarse_extended))
@@ -208,7 +210,6 @@ result <- lapply(resolutions, function(res) {
   area.backtot <- w.quad(datadummyppmtot)
   # Nb: I think commented code is incorrect, the actual window is smaller
   # windowarea <- (xmax(covraster.coarse_extended)-xmin(covraster.coarse_extended))*(ymax(covraster.coarse_extended)-ymin(covraster.coarse_extended))
-  windowarea <- volume(datadummyppmtot$data$window)
   X.back1tot <- cbind(x = datadummylogitot$dummy$x,
                       y = datadummylogitot$dummy$y)
   X.back1tot <- cbind(intercept = 1, extract(covraster.coarse_extended_plus_cross,
@@ -231,37 +232,40 @@ result <- lapply(resolutions, function(res) {
        lllogi = maxllblr,
        llpoisson = maxllfitIPP,
        fitppm = capeweedppm,
-       fitlogi = capeweedlogi)
+       fitlogi = capeweedlogi,
+       npoints = length(cellnum),
+       resolution = res)
 })
 
-df <- data.frame(minutes = resolutions * 60,
+df <- data.frame(minutes = sapply(result, function(x) x$resolution) * 60,
+                 npoints = sapply(result, function(x) x$npoints),
                  auclogi = sapply(result, function(x) x$auclogi),
                  aucppm = sapply(result, function(x) x$aucppm),
                  lllogi = sapply(result, function(x) x$lllogi),
                  llpoisson = sapply(result, function(x) x$llpoisson))
 
 ggplot(data = df) + 
-  geom_line(aes(x = minutes, y = auclogi, colour = "BLR")) +
-  geom_line(aes(x = minutes, y = aucppm, colour = "PPM-BT")) +
-  geom_point(aes(x = minutes, y = auclogi, colour = "BLR")) +
-  geom_point(aes(x = minutes, y = aucppm, colour = "PPM-BT")) +
+  geom_line(aes(x = log(npoints), y = auclogi, colour = "BLR")) +
+  geom_line(aes(x = log(npoints), y = aucppm, colour = "PPM-BT")) +
+  geom_point(aes(x = log(npoints), y = auclogi, colour = "BLR")) +
+  geom_point(aes(x = log(npoints), y = aucppm, colour = "PPM-BT")) +
   ylab("AUC") + 
-  xlab("Resolution (arcminutes)") +
+  xlab("Logarithm of the number of background points") +
   scale_color_discrete(name = "") +
   theme_minimal()
 
 ggplot(data = df) + 
-  geom_line(aes(x = minutes, y = lllogi - lllogi[1] + llpoisson[1], colour = "BLR")) +
-  geom_line(aes(x = minutes, y = llpoisson, colour = "PPM-BT")) +
-  geom_point(aes(x = minutes, y = lllogi - lllogi[1] + llpoisson[1], colour = "BLR")) +
-  geom_point(aes(x = minutes, y = llpoisson, colour = "PPM-BT")) +
+  geom_line(aes(x = log(npoints), y = lllogi, colour = "BLR")) +
+  geom_line(aes(x = log(npoints), y = llpoisson, colour = "PPM-BT")) +
+  geom_point(aes(x = log(npoints), y = lllogi, colour = "BLR")) +
+  geom_point(aes(x = log(npoints), y = llpoisson, colour = "PPM-BT")) +
   ylab("Log-likelihood") + 
-  xlab("Resolution (arcminutes)") +
+  xlab("Logarithm of the number of background points") +
   scale_color_discrete(name = "") +
   theme_minimal()
 
 # best fit
-fit <- result[[1]]$fitppm
+fit <- result[[which.max(sapply(result, function(x) x$npoints))]]$fitppm
 # summary
 summary(fit)
 # number of dummy points
