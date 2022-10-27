@@ -15,7 +15,7 @@ set.seed(2)
 # desaggregate_threshold <- 10 / 60
 desaggregate_threshold <- 0 # larger values mean we remove presence points that are too close to one another
 # resolutions <- c(1, 2, 5, 7, 10, 20, 30, 40, 50, 60) / 60 # different resolutions considered (in arcminutes)
-npoints <- floor(exp(seq(from = 4, to = 10, by = 0.25))) # number of background points to consider
+npoints <- floor(exp(seq(from = 4, to = 12, by = 0.25))) # number of background points to consider
 
 ##########################################
 # load presence data with initial analysis
@@ -94,6 +94,9 @@ configuration <- ppp(x = dat.thin$x,
 configuration_val <- ppp(x = dat.val.thin$x, 
                          y = dat.val.thin$y, 
                          window = victoriapixel)
+
+length(configuration$x)
+length(configuration_val$x)
 
 result <- lapply(npoints, function(n) {
   ################################################################################################################
@@ -233,7 +236,7 @@ result <- lapply(npoints, function(n) {
        llpoisson = maxllfitIPP,
        fitppm = capeweedppm,
        fitlogi = capeweedlogi,
-       npoints = length(cellnum),
+       npoints = length(sgrid.loc.ipp$x),
        resolution = res)
 })
 
@@ -252,7 +255,7 @@ ggplot(data = df) +
   ylab("AUC") + 
   xlab("Logarithm of the number of background points") +
   scale_color_discrete(name = "") +
-  theme_minimal()
+  theme_minimal(base_size = 20)
 
 ggplot(data = df) + 
   geom_line(aes(x = log(npoints), y = lllogi, colour = "BLR")) +
@@ -271,6 +274,24 @@ summary(fit)
 # number of dummy points
 length(fit$Q$dummy$x)
 
+# min number of dummy points
+min(sapply(result, function(x) x$npoints))
+
+# max number of dummy points
+max(sapply(result, function(x) x$npoints))
+
+# log of nb of background points above the BLR recommendation
+log(sapply(result, function(x) x$npoints)[which(sapply(result, function(x) x$npoints) > 4 * length(configuration$x))[1]])
+
+# best AUC ppm
+result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm
+
+# best AUC logi
+result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi
+
+# how much increase in AUC
+(result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi - result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm) / result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm * 100
+
 # plot the fit
 predicted_intensity <- as.data.frame(rasterToPoints(raster(log(predict.ppm(fit, type = "intensity", ngrid = dim(covraster.coarse_extended)[c(1,2)])))))
 a <- "Training"
@@ -288,6 +309,6 @@ ggplot(data = predicted_intensity, aes_string(x = 'x', y = 'y')) +
   xlab(NULL) + # Remove x labels
   ylab(NULL) + # Remove y labels
   coord_equal() +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 20) +
   guides(shape = guide_legend(override.aes = list(alpha = 1, size = 3), title = ""),
          color = guide_legend(alpha = 1, title = ""))

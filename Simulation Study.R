@@ -311,6 +311,8 @@ result <- lapply(npoints, function(n) {
     rmse_results$ppmipp[i] <- rmse(parameter, totppmIPP[i, ])
   }
   
+  # and the log-likelihood
+  
   ll_results <- list()
   ll_results$IPP <- matrix(NA, N)
   ll_results$IPPBT <- matrix(NA, N)
@@ -325,11 +327,30 @@ result <- lapply(npoints, function(n) {
     ll_results$ppmipp[i] <- maxllppmIPP[i, ]
   }
   
+  # as well as the beta coefficients...
+  
+  beta <- vector(length = ncol(totfitIPP), mode = "list")
+  for(j in seq_len(ncol(totfitIPP))) {
+    beta[[j]]$IPP <- matrix(NA, N)
+    beta[[j]]$IPPBT <- matrix(NA, N)
+    beta[[j]]$lr <- matrix(NA, N)
+    beta[[j]]$lrbadd <- matrix(NA, N)
+    beta[[j]]$ppmipp <- matrix(NA, N)
+    for(i in 1:N) {
+      beta[[j]]$IPP[i] <- totfitIPP[i, j]
+      beta[[j]]$IPPBT[i] <- totfitIPPBT[i, j]
+      beta[[j]]$lr[i] <- totwlrfit[i, j]
+      beta[[j]]$lrbadd[i] <- totlrbadd[i, j]
+      beta[[j]]$ppmipp[i] <- totppmIPP[i, j]
+    }
+  }
+  
   list(summary = summary_results,
        rmse = rmse_results,
        ll = ll_results,
        npoints = length(cellnum),
-       resolution = res)
+       resolution = res,
+       beta = beta)
 })
 
 df <- c()
@@ -339,12 +360,24 @@ for(i in seq_len(length(result))) {
                     result[[i]]$npoints,
                     result[[i]]$rmse$IPP,
                     result[[i]]$ll$IPP,
+                    result[[i]]$beta[[1]]$IPP,
+                    result[[i]]$beta[[2]]$IPP,
+                    result[[i]]$beta[[3]]$IPP,
+                    result[[i]]$beta[[4]]$IPP,
+                    result[[i]]$beta[[5]]$IPP,
+                    result[[i]]$beta[[6]]$IPP,
                     "PPM-GR"))
   df <- rbind(df,
               cbind(result[[i]]$resolution * 60,
                     result[[i]]$npoints,
                     result[[i]]$rmse$IPPBT,
                     result[[i]]$ll$IPPBT,
+                    result[[i]]$beta[[1]]$IPPBT,
+                    result[[i]]$beta[[2]]$IPPBT,
+                    result[[i]]$beta[[3]]$IPPBT,
+                    result[[i]]$beta[[4]]$IPPBT,
+                    result[[i]]$beta[[5]]$IPPBT,
+                    result[[i]]$beta[[6]]$IPPBT,
                     "PPM-BT"))
   
   df <- rbind(df,
@@ -352,6 +385,12 @@ for(i in seq_len(length(result))) {
                     result[[i]]$npoints,
                     result[[i]]$rmse$lr,
                     result[[i]]$ll$lr,
+                    result[[i]]$beta[[1]]$lr,
+                    result[[i]]$beta[[2]]$lr,
+                    result[[i]]$beta[[3]]$lr,
+                    result[[i]]$beta[[4]]$lr,
+                    result[[i]]$beta[[5]]$lr,
+                    result[[i]]$beta[[6]]$lr,
                     "IWLR"))
   
   df <- rbind(df,
@@ -359,6 +398,12 @@ for(i in seq_len(length(result))) {
                     result[[i]]$npoints,
                     result[[i]]$rmse$lrbadd,
                     result[[i]]$ll$lrbadd,
+                    result[[i]]$beta[[1]]$lrbadd,
+                    result[[i]]$beta[[2]]$lrbadd,
+                    result[[i]]$beta[[3]]$lrbadd,
+                    result[[i]]$beta[[4]]$lrbadd,
+                    result[[i]]$beta[[5]]$lrbadd,
+                    result[[i]]$beta[[6]]$lrbadd,
                     "BLR"))
   
   df <- rbind(df,
@@ -366,15 +411,27 @@ for(i in seq_len(length(result))) {
                     result[[i]]$npoints,
                     result[[i]]$rmse$ppmipp,
                     result[[i]]$ll$ppmipp,
+                    result[[i]]$beta[[1]]$ppmipp,
+                    result[[i]]$beta[[2]]$ppmipp,
+                    result[[i]]$beta[[3]]$ppmipp,
+                    result[[i]]$beta[[4]]$ppmipp,
+                    result[[i]]$beta[[5]]$ppmipp,
+                    result[[i]]$beta[[6]]$ppmipp,
                     "PPM-BT (spatstat)"))
   
 }
 df <- as.data.frame(df)
-colnames(df) <- c("resolution", "npoints", "rmse", "ll", "method")
+colnames(df) <- c("resolution", "npoints", "rmse", "ll", "intercept", "beta1", "beta2", "beta3", "beta4", "beta5", "method")
 df$rmse <- as.numeric(as.character(df$rmse))
 df$ll <- as.numeric(as.character(df$ll))
 df$resolution <- as.numeric(as.character(df$resolution))
 df$npoints <- as.numeric(as.character(df$npoints))
+df$intercept <- as.numeric(as.character(df$intercept))
+df$beta1 <- as.numeric(as.character(df$beta1))
+df$beta2 <- as.numeric(as.character(df$beta2))
+df$beta3 <- as.numeric(as.character(df$beta3))
+df$beta4 <- as.numeric(as.character(df$beta4))
+df$beta5 <- as.numeric(as.character(df$beta5))
 
 # Fix offset for Baddeley logistic regression
 a <- sd(df$ll[df$method != "BLR"]) / sd(df$ll[df$method == "BLR"])
@@ -392,6 +449,24 @@ for(i in seq_len(nrow(df_medians))) {
   df_medians$ll[i] <- median(df$ll[df$resolution == df_medians$resolution[i] & 
                                      df$npoints == df_medians$npoints[i] &
                                      df$method == df_medians$method[i]])
+  df_medians$intercept[i] <- median(df$intercept[df$resolution == df_medians$resolution[i] & 
+                                                   df$npoints == df_medians$npoints[i] &
+                                                   df$method == df_medians$method[i]])
+  df_medians$beta1[i] <- median(df$beta1[df$resolution == df_medians$resolution[i] & 
+                                           df$npoints == df_medians$npoints[i] &
+                                           df$method == df_medians$method[i]])
+  df_medians$beta2[i] <- median(df$beta2[df$resolution == df_medians$resolution[i] & 
+                                           df$npoints == df_medians$npoints[i] &
+                                           df$method == df_medians$method[i]])
+  df_medians$beta3[i] <- median(df$beta3[df$resolution == df_medians$resolution[i] & 
+                                           df$npoints == df_medians$npoints[i] &
+                                           df$method == df_medians$method[i]])
+  df_medians$beta4[i] <- median(df$beta4[df$resolution == df_medians$resolution[i] & 
+                                           df$npoints == df_medians$npoints[i] &
+                                           df$method == df_medians$method[i]])
+  df_medians$beta5[i] <- median(df$beta5[df$resolution == df_medians$resolution[i] & 
+                                           df$npoints == df_medians$npoints[i] &
+                                           df$method == df_medians$method[i]])
 }
 
 ggplot(data = df) + 
@@ -411,9 +486,81 @@ ggplot(data = df) +
                    group = paste(method, log(npoints))),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0)) +
   geom_line(data = df_medians, aes(x = log(npoints), y = rmse, colour = method), size = 1.5) +
-  theme_minimal() +
+  theme_minimal(base_size = 20) +
   xlab("Logarithm of the number of background points") +
   ylab("RMSE") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = intercept, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = intercept, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[1]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("Intercept") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = beta1, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = beta1, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[2]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("BIO3") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = beta2, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = beta2, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[3]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("BIO8") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = beta3, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = beta3, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[4]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("BIO9") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = beta4, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = beta4, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[5]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("BIO13") +
+  scale_color_discrete(name = "") +
+  scale_fill_discrete(name = "")
+
+ggplot(data = df) + 
+  geom_boxplot(aes(x = log(npoints), y = beta5, fill = method, colour = method, 
+                   group = paste(method, log(npoints))),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians, aes(x = log(npoints), y = beta5, colour = method), size = 1.5) +
+  geom_line(aes(x = log(npoints), y = parameter[6]), colour = "black") +
+  theme_minimal(base_size = 20) +
+  xlab("Logarithm of the number of background points") +
+  ylab("BIO14") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
 
@@ -434,9 +581,16 @@ ggplot(data = df) +
                    group = paste(method, log(npoints))),
                size = 0.5, alpha = 0.5, width = 0.1, position = position_dodge(0)) +
   geom_line(data = df_medians, aes(x = log(npoints), y = ll, colour = method), size = 1.5) +
-  theme_minimal() +
+  theme_minimal(base_size = 20) +
   xlab("Logarithm of the number of background points") +
   ylab("Log-likelihood") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
 
+# min number of dummy points
+min(sapply(result, function(x) x$npoints))
+max(sapply(result, function(x) x$resolution)) * 60
+
+# max number of dummy points
+max(sapply(result, function(x) x$npoints))
+min(sapply(result, function(x) x$resolution)) * 60
