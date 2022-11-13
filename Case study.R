@@ -15,7 +15,7 @@ set.seed(2)
 # desaggregate_threshold <- 10 / 60
 desaggregate_threshold <- 0 # larger values mean we remove presence points that are too close to one another
 # resolutions <- c(1, 2, 5, 7, 10, 20, 30, 40, 50, 60) / 60 # different resolutions considered (in arcminutes)
-npoints <- floor(exp(seq(from = 4, to = 12, by = 0.25))) # number of background points to consider
+npoints <- floor(exp(seq(from = 3, to = 13, by = 0.25))) # number of background points to consider
 
 ##########################################
 # load presence data with initial analysis
@@ -52,10 +52,14 @@ names(covraster.coarse) <- c('bio8',
                              'bio14',
                              'bio18',
                              'pH')
+# load bias layer
+bias <- raster("bias.tif")
 # extend covariate data, basically fixing xmax
-e <- extent(130, 154, -44, -30) 
+e <- extent(130, 155, -45, -30) 
 covraster.coarse_extended <- terra::extend(covraster.coarse, e)
+bias_extended <- terra::extend(bias, e)
 # plot resulting covariates
+covraster.coarse_extended <- stack(covraster.coarse_extended, resample(scale(bias_extended), covraster.coarse_extended))
 plot(covraster.coarse_extended)
 
 ############
@@ -74,14 +78,9 @@ victoriapixel <- owin(xrange = c(130, 154),
                       mask = pixel)
 
 # convert covariates to spatstat format
-bio8 <- maptools::as.im.RasterLayer(covraster.coarse_extended$bio8)
-bio14 <- maptools::as.im.RasterLayer(covraster.coarse_extended$bio14)
-bio18 <- maptools::as.im.RasterLayer(covraster.coarse_extended$bio18)
-pH <- maptools::as.im.RasterLayer(covraster.coarse_extended$pH)
-covlist <- list(bio8 = bio8,
-                bio14 = bio14,
-                bio18 = bio18,
-                pH = pH)
+covlist <- setNames(lapply(names(covraster.coarse_extended), function(nm) {
+  maptools::as.im.RasterLayer(covraster.coarse_extended[[nm]])
+}), nm = names(covraster.coarse_extended))
 
 # Remove presence points which are not inside the window
 dat.thin <- dat.thin[inside.owin(dat.thin$x, dat.thin$y, victoriapixel), ]
@@ -150,11 +149,11 @@ result <- lapply(npoints, function(n) {
   ###########
   
   capeweedppm <- ppm(datadummyppm,
-                     trend = ~ 1 + bio8 + bio14 + bio18 + pH + bio8 : pH,
+                     trend = ~ 1 + bio8 + bio14 + bio18 + pH + bias + bio8 : pH,
                      covariates = covlist,
                      method = 'mpl')
   capeweedlogi <- ppm(datadummylogi,
-                      trend = ~ 1 + bio8 + bio14 + bio18 + pH + bio8 : pH,
+                      trend = ~ 1 + bio8 + bio14 + bio18 + pH + bias + bio8 : pH,
                       covariates = covlist,
                       method = 'logi')
   # plot predictions
@@ -253,9 +252,10 @@ ggplot(data = df) +
   geom_point(aes(x = log(npoints), y = auclogi, colour = "BLR")) +
   geom_point(aes(x = log(npoints), y = aucppm, colour = "PPM-BT")) +
   ylab("AUC") + 
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   scale_color_discrete(name = "") +
-  theme_minimal(base_size = 20)
+  theme_minimal(base_size = 20) +
+  guides(colour = guide_legend(override.aes = list(size = 1.5)))
 
 ggplot(data = df) + 
   geom_line(aes(x = log(npoints), y = lllogi, colour = "BLR")) +
@@ -263,7 +263,7 @@ ggplot(data = df) +
   geom_point(aes(x = log(npoints), y = lllogi, colour = "BLR")) +
   geom_point(aes(x = log(npoints), y = llpoisson, colour = "PPM-BT")) +
   ylab("Log-likelihood") + 
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   scale_color_discrete(name = "") +
   theme_minimal()
 
@@ -289,7 +289,17 @@ result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm
 # best AUC logi
 result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi
 
-# how much increase in AUC
+# percentage difference between best/worse ppm AUC
+(result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm - result[[which.min(sapply(result, function(x) x$npoints))]]$aucppm ) / result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm * 100
+
+# percentage difference between best/worse ppm logi
+(result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi - result[[which.min(sapply(result, function(x) x$npoints))]]$auclogi ) / result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi * 100
+
+# percentage difference between best/worse ppm logi that satisfy recommendation
+res <- result[which(sapply(result, function(x) x$npoints) > 4 * length(configuration$x))]
+(res[[which.max(sapply(res, function(x) x$npoints))]]$auclogi - res[[which.min(sapply(res, function(x) x$npoints))]]$auclogi ) / res[[which.max(sapply(res, function(x) x$npoints))]]$auclogi * 100
+
+# how much is the increase in AUC
 (result[[which.max(sapply(result, function(x) x$npoints))]]$auclogi - result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm) / result[[which.max(sapply(result, function(x) x$npoints))]]$aucppm * 100
 
 # plot the fit
@@ -299,11 +309,27 @@ b <- "Validation"
 
 names(predicted_intensity)[names(predicted_intensity) == 'layer'] <- "Log-intensity"
 
+# filter out some of the points to make plot more readable
+dat.thin <- dat[inside.owin(dat$x, dat$y, victoriapixel), ]
+dat.val.thin <- datval[inside.owin(datval$x, datval$y, victoriapixel), ]
+
+dat.thin <- ecospat.occ.desaggregation(dat.thin,
+                                       min.dist = 5 / 60)
+dat.val.thin <- ecospat.occ.desaggregation(dat.val.thin,
+                                           min.dist = 5 / 60)
+# convert (thinned) presence points to ppp format
+thinned_configuration <- ppp(x = dat.thin$x, 
+                             y = dat.thin$y, 
+                             window = victoriapixel)
+thinned_configuration_val <- ppp(x = dat.val.thin$x, 
+                                 y = dat.val.thin$y, 
+                                 window = victoriapixel)
+
 ggplot(data = predicted_intensity, aes_string(x = 'x', y = 'y')) +
   geom_tile(aes(fill = `Log-intensity`), alpha = 0.5) +
   scale_fill_continuous_sequential(palette = "Purple-Yellow") +
-  geom_point(data = as.data.frame(configuration), aes(x = x, y = y, color = a, shape = a), size = 2, alpha = 0.1) +
-  geom_point(data = as.data.frame(configuration_val), aes(x = x, y = y, color = b, shape = b), size = 2, alpha = 0.1) +
+  geom_point(data = as.data.frame(thinned_configuration), aes(x = x, y = y, color = a, shape = a), size = 2, alpha = 0.3) +
+  geom_point(data = as.data.frame(thinned_configuration_val), aes(x = x, y = y, color = b, shape = b), size = 2, alpha = 0.3) +
   scale_color_manual(values = c("black", "orange")) + # Obtained by wesanderson::wes_palette("Darjeeling1")
   scale_shape_manual(values = c(16, 17)) +
   xlab(NULL) + # Remove x labels

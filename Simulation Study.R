@@ -77,7 +77,7 @@ parameter <- c(beta1 = 5, beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, 
 maxlambda <- max(exp(X %*% parameter), na.rm = TRUE)
 
 # resolutions <- 1:10 / 60 # resolutions to consider
-npoints <- floor(exp(seq(from = 4, to = 10, by = 0.25)))
+npoints <- floor(exp(seq(from = 4, to = 9, by = 0.5)))
 N <- 1000 # number of replications
 
 windowarea <- (xmax(bioclim) - xmin(bioclim)) * (ymax(bioclim) - ymin(bioclim))
@@ -201,7 +201,7 @@ result <- lapply(npoints, function(n) {
     
     sgrid.loc.ipptot <- as.ppp(sgrid.loctot, W = w)
     datadummytot <- quadscheme(s.loc.ipp, sgrid.loc.ipptot, method = "grid")
-    area.backtot <-w.quad(datadummytot)
+    area.backtot <- w.quad(datadummytot)
     
     # fit Poisson likelihood
     
@@ -487,7 +487,7 @@ ggplot(data = df) +
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0)) +
   geom_line(data = df_medians, aes(x = log(npoints), y = rmse, colour = method), size = 1.5) +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("RMSE") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -499,7 +499,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = intercept, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[1]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("Intercept") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -511,7 +511,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = beta1, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[2]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("BIO3") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -523,7 +523,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = beta2, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[3]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("BIO8") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -535,7 +535,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = beta3, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[4]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("BIO9") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -547,7 +547,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = beta4, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[5]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("BIO13") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -559,7 +559,7 @@ ggplot(data = df) +
   geom_line(data = df_medians, aes(x = log(npoints), y = beta5, colour = method), size = 1.5) +
   geom_line(aes(x = log(npoints), y = parameter[6]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("BIO14") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -571,7 +571,7 @@ ggplot(data = df) +
                    group = paste(method, log(average_presence) / log(npoints))),
                size = 0.2, alpha = 0.7, width = 0.05) +
   theme_minimal() +
-  xlab("Log(presence points) / log(background points)") +
+  xlab("Log(presence points) / log(dummy points)") +
   ylab("RMSE") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
@@ -582,7 +582,7 @@ ggplot(data = df) +
                size = 0.5, alpha = 0.5, width = 0.1, position = position_dodge(0)) +
   geom_line(data = df_medians, aes(x = log(npoints), y = ll, colour = method), size = 1.5) +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of background points") +
+  xlab("Logarithm of the number of dummy points") +
   ylab("Log-likelihood") +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
