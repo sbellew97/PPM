@@ -66,6 +66,9 @@ covlist <- list(a = as.im.RasterLayer(bio3),
                 e = as.im.RasterLayer(bio14))
 w <- as.owin(covlist[[1]])
 
+# How many presence points do we want to consider?
+npresence <- readline(prompt = "How many presence points do you want to consider? Input a single character, l for ~ 100, m for ~ 1000, and h for ~10000 ")
+
 X <- cbind(1,
            values(s)[, 'bio3'],
            values(s)[, 'bio8'],
@@ -73,11 +76,20 @@ X <- cbind(1,
            values(s)[, 'bio13'],
            values(s)[, 'bio14'])
 gridsizeratio = sum(!is.na(X)) / length(X)
-parameter <- c(beta1 = 5, beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+if(npresence == "l") {
+  parameter <- c(beta1 = 5 - log(1.4) + 1 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+} else if(npresence == "m") {
+  parameter <- c(beta1 = 5 - log(1.4) - 0 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+} else if(npresence == "h") {
+  parameter <- c(beta1 = 5 - log(1.4) - 1 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+} else {
+  stop("Incorrect number of presence points")
+}
+
 maxlambda <- max(exp(X %*% parameter), na.rm = TRUE)
 
-# resolutions <- 1:10 / 60 # resolutions to consider
-npoints <- floor(exp(seq(from = 4, to = 9, by = 0.5)))
+# Vector, each entry containing possible number of background points that we wish to consider
+npoints <- c(10^(0.5 * log10(100)), 100, 10^(mean(c(log10(100), log10(1000)))), 1000, 10^(mean(c(log10(1000), log10(10000)))), 10000, 10^(mean(c(log10(10000), log10(100000)))), 100000)
 N <- 1000 # number of replications
 
 windowarea <- (xmax(bioclim) - xmin(bioclim)) * (ymax(bioclim) - ymin(bioclim))
@@ -176,6 +188,8 @@ result <- lapply(npoints, function(n) {
     loglikblr
     
   }
+  
+  set.seed(1)
   
   for(i in 1:N) {
     # sample presence points
@@ -353,6 +367,8 @@ result <- lapply(npoints, function(n) {
        beta = beta)
 })
 
+# save(result, file = "result_high_presence.RData")
+
 df <- c()
 for(i in seq_len(length(result))) {
   df <- rbind(df,
@@ -469,6 +485,21 @@ for(i in seq_len(nrow(df_medians))) {
                                            df$method == df_medians$method[i]])
 }
 
+beta1 <- lapply(result, function(r) data.frame(IPP = r$beta[[2]]$IPP,
+                                               IPPBT = r$beta[[2]]$IPPBT,
+                                               lr = r$beta[[2]]$lr,
+                                               lrbadd = r$beta[[2]]$lrbadd))
+
+i <- 2
+ggplot() +
+  geom_point(aes(x = beta1[[i]]$lrbadd,
+                 y = beta1[[7]]$IPPBT)) +
+  theme_minimal(base_size = 20) +
+  xlab(paste0("BLR estimate of BIO3 with ", result[[i]]$npoints, " dummy points")) +
+  ylab("True PPM likelihood estimate of BIO3") +
+  geom_hline(yintercept = parameter[2], colour = "red") +
+  geom_vline(xintercept = parameter[2], colour = "red")
+
 ggplot(data = df) + 
   geom_boxplot(aes(x = resolution, y = rmse, fill = method, colour = method, 
                    group = paste(method, resolution)),
@@ -481,88 +512,109 @@ ggplot(data = df) +
   scale_fill_discrete(name = "")
 
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = rmse, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
-               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = rmse, colour = method), size = 1.5) +
+png(file = "rmse.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = rmse, fill = method, colour = method, 
+                   group = paste(method, npoints)),
+               size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = rmse, colour = method), size = 1.5) +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("RMSE") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = intercept, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "intercept.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = intercept, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = intercept, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[1]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = intercept, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[1]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("Intercept") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = beta1, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "bio3.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = beta1, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = beta1, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[2]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = beta1, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[2]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("BIO3") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = beta2, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "bio8.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = beta2, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = beta2, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[3]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = beta2, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[3]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("BIO8") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = beta3, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "bio9.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = beta3, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = beta3, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[4]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = beta3, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[4]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("BIO9") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = beta4, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "bio13.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = beta4, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = beta4, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[5]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = beta4, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[5]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("BIO13") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
-ggplot(data = df) + 
-  geom_boxplot(aes(x = log(npoints), y = beta5, fill = method, colour = method, 
-                   group = paste(method, log(npoints))),
+png(file = "bio14.png", bg = "white", width = 1100, height = 500)
+ggplot(data = df[df$npoints > 50, ]) + 
+  geom_boxplot(aes(x = npoints, y = beta5, fill = method, colour = method, 
+                   group = paste(method, npoints)),
                size = 0.5, alpha = 0.7, width = 0.15, position = position_dodge(0.1)) +
-  geom_line(data = df_medians, aes(x = log(npoints), y = beta5, colour = method), size = 1.5) +
-  geom_line(aes(x = log(npoints), y = parameter[6]), colour = "black") +
+  geom_line(data = df_medians[df_medians$npoints > 50, ], aes(x = npoints, y = beta5, colour = method), size = 1.5) +
+  geom_line(aes(x = npoints, y = parameter[6]), colour = "black") +
   theme_minimal(base_size = 20) +
-  xlab("Logarithm of the number of dummy points") +
+  xlab("Number of dummy points") +
   ylab("BIO14") +
+  scale_x_continuous(trans = 'log10') +
   scale_color_discrete(name = "") +
   scale_fill_discrete(name = "")
+dev.off()
 
 average_presence <- mean(exp(X %*% parameter)) * windowarea
 
