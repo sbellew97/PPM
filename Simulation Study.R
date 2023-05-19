@@ -40,15 +40,15 @@ s <- addLayer(s, r)
 values(r) <- values(bio8)
 names(r) <- 'bio8'
 s <- addLayer(s, r)
-values(r) <- values(bio9)
-names(r) <- 'bio9'
-s <- addLayer(s, r)
-values(r) <- values(bio13)
-names(r) <- 'bio13'
-s <- addLayer(s, r)
-values(r) <- values(bio14)
-names(r) <- 'bio14'
-s <- addLayer(s, r)
+# values(r) <- values(bio9)
+# names(r) <- 'bio9'
+# s <- addLayer(s, r)
+# values(r) <- values(bio13)
+# names(r) <- 'bio13'
+# s <- addLayer(s, r)
+# values(r) <- values(bio14)
+# names(r) <- 'bio14'
+# s <- addLayer(s, r)
 s <- scale(s, center = TRUE, scale = TRUE)
 
 #create covariate list for use in spatstat from the covariate raster
@@ -60,10 +60,10 @@ bio13 <- scale(bio13, center = TRUE, scale = TRUE)
 bio14 <- scale(bio14, center = TRUE, scale = TRUE)
 
 covlist <- list(a = as.im.RasterLayer(bio3),
-                b = as.im.RasterLayer(bio8),
-                c = as.im.RasterLayer(bio9),
-                d = as.im.RasterLayer(bio13),
-                e = as.im.RasterLayer(bio14))
+                b = as.im.RasterLayer(bio8))#,
+                # c = as.im.RasterLayer(bio9),
+                # d = as.im.RasterLayer(bio13),
+                # e = as.im.RasterLayer(bio14))
 w <- as.owin(covlist[[1]])
 
 # How many presence points do we want to consider?
@@ -71,17 +71,17 @@ npresence <- readline(prompt = "How many presence points do you want to consider
 
 X <- cbind(1,
            values(s)[, 'bio3'],
-           values(s)[, 'bio8'],
-           values(s)[, 'bio9'],
-           values(s)[, 'bio13'],
-           values(s)[, 'bio14'])
+           values(s)[, 'bio8'])#,
+           # values(s)[, 'bio9'],
+           # values(s)[, 'bio13'],
+           # values(s)[, 'bio14'])
 gridsizeratio = sum(!is.na(X)) / length(X)
 if(npresence == "l") {
-  parameter <- c(beta1 = 5 - log(1.4) + 1 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+  parameter <- c(beta1 = 5 - log(1.4) + 1 * log(0.1), beta2 = 0.2, beta3 = 0.3)#, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
 } else if(npresence == "m") {
-  parameter <- c(beta1 = 5 - log(1.4) - 0 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+  parameter <- c(beta1 = 5 - log(1.4) - 0 * log(0.1), beta2 = 0.2, beta3 = 0.3)#, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
 } else if(npresence == "h") {
-  parameter <- c(beta1 = 5 - log(1.4) - 1 * log(0.1), beta2 = 0.2, beta3 = 0.3, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
+  parameter <- c(beta1 = 5 - log(1.4) - 1 * log(0.1), beta2 = 0.2, beta3 = 0.3)#, beta4 = -0.2, beta5 = 0.26, beta6 = -0.2)
 } else {
   stop("Incorrect number of presence points")
 }
@@ -111,15 +111,15 @@ result <- lapply(npoints, function(n) {
   sgrid.loc <- xyFromCell(s, cellnum)
   sgrid.bio3 <- values(s)[, 'bio3'][cellnum]
   sgrid.bio8 <- values(s)[, 'bio8'][cellnum]
-  sgrid.bio9 <- values(s)[, 'bio9'][cellnum]
-  sgrid.bio13 <- values(s)[, 'bio13'][cellnum]
-  sgrid.bio14 <- values(s)[, 'bio14'][cellnum]
+  # sgrid.bio9 <- values(s)[, 'bio9'][cellnum]
+  # sgrid.bio13 <- values(s)[, 'bio13'][cellnum]
+  # sgrid.bio14 <- values(s)[, 'bio14'][cellnum]
   X.back1 <- cbind(1,
                    sgrid.bio3,
-                   sgrid.bio8,
-                   sgrid.bio9,
-                   sgrid.bio13,
-                   sgrid.bio14)
+                   sgrid.bio8)#,
+                   # sgrid.bio9,
+                   # sgrid.bio13,
+                   # sgrid.bio14)
   
   # set initial values
   totlrbadd <- totwlrfit <- totfitIPP <- totfitIPPBT <- totppmIPP <- matrix(0, N, dim(X)[2])
@@ -235,8 +235,9 @@ result <- lapply(npoints, function(n) {
     # put covariates into dataframe for use in glm
     
     tm <- Sys.time()
-    X.polr <- cbind(X.poslope, array(1, dim(X.poslope)[1]))
-    X.dpp <- cbind(X.back1[,2:dim(X.back1)[2]], array(0, dim(X.back1)[1]))
+    colnames(X.poslope) <- colnames(X.back1)[2:dim(X.back1)[2]]
+    X.polr <- cbind(X.poslope, X = array(1, dim(X.poslope)[1]))
+    X.dpp <- cbind(X.back1[,2:dim(X.back1)[2]], X = array(0, dim(X.back1)[1]))
     mydata <- rbind(X.polr, X.dpp)
     offst <- array(log(dim(X.back1)[1] / windowarea), dim(mydata)[1])
     mydata <- as.data.frame(mydata)
@@ -244,7 +245,8 @@ result <- lapply(npoints, function(n) {
     
     #fit Baddeley Regression
     
-    lrbadd <- glm(V6 ~ sgrid.bio3 + sgrid.bio8 + sgrid.bio9 + sgrid.bio13 + sgrid.bio14 + offset(-offst), 
+    lrbadd <- glm(X ~ offset(-offst) + sgrid.bio3 + sgrid.bio8# + sgrid.bio9 + sgrid.bio13 + sgrid.bio14 + 
+                  , 
                   data = mydata,
                   family = "binomial")
     tmlrbadd <- tmlrbadd + Sys.time() - tm
@@ -265,7 +267,7 @@ result <- lapply(npoints, function(n) {
     mydata2 <- as.data.frame(rbind(X.po, X.back1))
     mydata2 <- mydata2[, 2:dim(mydata2)[2]]
     ppmIPP <- ppm(datadummy, 
-                  trend = ~ sgrid.bio3 + sgrid.bio8 + sgrid.bio9 + sgrid.bio13 + sgrid.bio14, 
+                  trend = ~ sgrid.bio3 + sgrid.bio8,# + sgrid.bio9 + sgrid.bio13 + sgrid.bio14, 
                   data = mydata2, 
                   method = 'mpl'
     )
@@ -379,9 +381,9 @@ for(i in seq_len(length(result))) {
                     result[[i]]$beta[[1]]$IPP,
                     result[[i]]$beta[[2]]$IPP,
                     result[[i]]$beta[[3]]$IPP,
-                    result[[i]]$beta[[4]]$IPP,
-                    result[[i]]$beta[[5]]$IPP,
-                    result[[i]]$beta[[6]]$IPP,
+                    # result[[i]]$beta[[4]]$IPP,
+                    # result[[i]]$beta[[5]]$IPP,
+                    # result[[i]]$beta[[6]]$IPP,
                     "PPM-GR"))
   df <- rbind(df,
               cbind(result[[i]]$resolution * 60,
@@ -391,9 +393,9 @@ for(i in seq_len(length(result))) {
                     result[[i]]$beta[[1]]$IPPBT,
                     result[[i]]$beta[[2]]$IPPBT,
                     result[[i]]$beta[[3]]$IPPBT,
-                    result[[i]]$beta[[4]]$IPPBT,
-                    result[[i]]$beta[[5]]$IPPBT,
-                    result[[i]]$beta[[6]]$IPPBT,
+                    # result[[i]]$beta[[4]]$IPPBT,
+                    # result[[i]]$beta[[5]]$IPPBT,
+                    # result[[i]]$beta[[6]]$IPPBT,
                     "PPM-BT"))
   
   df <- rbind(df,
@@ -404,9 +406,9 @@ for(i in seq_len(length(result))) {
                     result[[i]]$beta[[1]]$lr,
                     result[[i]]$beta[[2]]$lr,
                     result[[i]]$beta[[3]]$lr,
-                    result[[i]]$beta[[4]]$lr,
-                    result[[i]]$beta[[5]]$lr,
-                    result[[i]]$beta[[6]]$lr,
+                    # result[[i]]$beta[[4]]$lr,
+                    # result[[i]]$beta[[5]]$lr,
+                    # result[[i]]$beta[[6]]$lr,
                     "IWLR"))
   
   df <- rbind(df,
@@ -417,9 +419,9 @@ for(i in seq_len(length(result))) {
                     result[[i]]$beta[[1]]$lrbadd,
                     result[[i]]$beta[[2]]$lrbadd,
                     result[[i]]$beta[[3]]$lrbadd,
-                    result[[i]]$beta[[4]]$lrbadd,
-                    result[[i]]$beta[[5]]$lrbadd,
-                    result[[i]]$beta[[6]]$lrbadd,
+                    # result[[i]]$beta[[4]]$lrbadd,
+                    # result[[i]]$beta[[5]]$lrbadd,
+                    # result[[i]]$beta[[6]]$lrbadd,
                     "BLR"))
   
   df <- rbind(df,
@@ -430,14 +432,15 @@ for(i in seq_len(length(result))) {
                     result[[i]]$beta[[1]]$ppmipp,
                     result[[i]]$beta[[2]]$ppmipp,
                     result[[i]]$beta[[3]]$ppmipp,
-                    result[[i]]$beta[[4]]$ppmipp,
-                    result[[i]]$beta[[5]]$ppmipp,
-                    result[[i]]$beta[[6]]$ppmipp,
+                    # result[[i]]$beta[[4]]$ppmipp,
+                    # result[[i]]$beta[[5]]$ppmipp,
+                    # result[[i]]$beta[[6]]$ppmipp,
                     "PPM-BT (spatstat)"))
   
 }
 df <- as.data.frame(df)
-colnames(df) <- c("resolution", "npoints", "rmse", "ll", "intercept", "beta1", "beta2", "beta3", "beta4", "beta5", "method")
+colnames(df) <- c("resolution", "npoints", "rmse", "ll", "intercept", "beta1", "beta2", #"beta3", "beta4", "beta5", 
+                  "method")
 df$rmse <- as.numeric(as.character(df$rmse))
 df$ll <- as.numeric(as.character(df$ll))
 df$resolution <- as.numeric(as.character(df$resolution))
@@ -445,9 +448,9 @@ df$npoints <- as.numeric(as.character(df$npoints))
 df$intercept <- as.numeric(as.character(df$intercept))
 df$beta1 <- as.numeric(as.character(df$beta1))
 df$beta2 <- as.numeric(as.character(df$beta2))
-df$beta3 <- as.numeric(as.character(df$beta3))
-df$beta4 <- as.numeric(as.character(df$beta4))
-df$beta5 <- as.numeric(as.character(df$beta5))
+# df$beta3 <- as.numeric(as.character(df$beta3))
+# df$beta4 <- as.numeric(as.character(df$beta4))
+# df$beta5 <- as.numeric(as.character(df$beta5))
 
 # Fix offset for Baddeley logistic regression
 a <- sd(df$ll[df$method != "BLR"]) / sd(df$ll[df$method == "BLR"])
@@ -474,16 +477,46 @@ for(i in seq_len(nrow(df_medians))) {
   df_medians$beta2[i] <- median(df$beta2[df$resolution == df_medians$resolution[i] & 
                                            df$npoints == df_medians$npoints[i] &
                                            df$method == df_medians$method[i]])
-  df_medians$beta3[i] <- median(df$beta3[df$resolution == df_medians$resolution[i] & 
-                                           df$npoints == df_medians$npoints[i] &
-                                           df$method == df_medians$method[i]])
-  df_medians$beta4[i] <- median(df$beta4[df$resolution == df_medians$resolution[i] & 
-                                           df$npoints == df_medians$npoints[i] &
-                                           df$method == df_medians$method[i]])
-  df_medians$beta5[i] <- median(df$beta5[df$resolution == df_medians$resolution[i] & 
-                                           df$npoints == df_medians$npoints[i] &
-                                           df$method == df_medians$method[i]])
+  # df_medians$beta3[i] <- median(df$beta3[df$resolution == df_medians$resolution[i] & 
+  #                                          df$npoints == df_medians$npoints[i] &
+  #                                          df$method == df_medians$method[i]])
+  # df_medians$beta4[i] <- median(df$beta4[df$resolution == df_medians$resolution[i] & 
+  #                                          df$npoints == df_medians$npoints[i] &
+  #                                          df$method == df_medians$method[i]])
+  # df_medians$beta5[i] <- median(df$beta5[df$resolution == df_medians$resolution[i] & 
+  #                                          df$npoints == df_medians$npoints[i] &
+  #                                          df$method == df_medians$method[i]])
 }
+
+# Code below computes bias and se
+df$intercept_bias <- df$intercept - parameter[1]
+df$beta1_bias <- df$beta1 - parameter[2]
+df$beta2_bias <- df$beta2 - parameter[3]
+
+bias <- expand.grid(npoints = unique(df$npoints), method = unique(df$method))
+bias$mean_intercept_bias <- sapply(seq_len(nrow(bias)), function(i) mean(df$intercept_bias[df$npoints == bias$npoints[i] & 
+                                                                                             df$method == bias$method[i]]))
+bias$mean_beta1_bias <- sapply(seq_len(nrow(bias)), function(i) mean(df$beta1_bias[df$npoints == bias$npoints[i] & 
+                                                                                     df$method == bias$method[i]]))
+bias$mean_beta2_bias <- sapply(seq_len(nrow(bias)), function(i) mean(df$beta2_bias[df$npoints == bias$npoints[i] & 
+                                                                                     df$method == bias$method[i]]))
+
+
+bias$mean_intercept_sd <- sapply(seq_len(nrow(bias)), function(i) sd(df$intercept[df$npoints == bias$npoints[i] & 
+                                                                                    df$method == bias$method[i]]))
+bias$mean_beta1_sd <- sapply(seq_len(nrow(bias)), function(i) sd(df$beta1[df$npoints == bias$npoints[i] & 
+                                                                            df$method == bias$method[i]]))
+bias$mean_beta2_sd <- sapply(seq_len(nrow(bias)), function(i) sd(df$beta2[df$npoints == bias$npoints[i] & 
+                                                                            df$method == bias$method[i]]))
+
+bias
+
+
+
+
+
+
+
 
 beta1 <- lapply(result, function(r) data.frame(IPP = r$beta[[2]]$IPP,
                                                IPPBT = r$beta[[2]]$IPPBT,
